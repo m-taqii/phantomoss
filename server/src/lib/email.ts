@@ -1,21 +1,24 @@
 import nodemailer from "nodemailer";
+import { env } from "./env";
 
 export interface SendEmailOptions {
   to: string;
   subject: string;
   text?: string;
   html?: string;
+  inReplyTo?: string;
+  references?: string;
 }
 
 // Sends an email using nodemailer.
 export async function sendEmail(options: SendEmailOptions): Promise<nodemailer.SentMessageInfo> {
-  const { to, subject, text, html } = options;
+  const { to, subject, text, html, inReplyTo, references } = options;
 
-  const host = process.env.SMTP_HOST;
-  const port = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 587;
-  const secure = process.env.SMTP_SECURE === "true" || port === 465;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+  const host = env.SMTP_HOST;
+  const port = env.SMTP_PORT ? Number(env.SMTP_PORT) : 587;
+  const secure = env.SMTP_SECURE === "true" || port === 465;
+  const user = env.SMTP_USER || env.IMAP_USER;
+  const pass = env.SMTP_PASS || env.IMAP_PASS;
 
   if (!host || !user || !pass) {
     throw new Error(
@@ -38,10 +41,12 @@ export async function sendEmail(options: SendEmailOptions): Promise<nodemailer.S
     subject,
     text,
     html,
+    inReplyTo,
+    references,
   };
 
-  const defaultFromName = process.env.SMTP_FROM_NAME || "Phantom";
-  const defaultFromAddress = process.env.SMTP_FROM_ADDRESS || user;
+  const defaultFromName = env.SMTP_FROM_NAME || "Phantom";
+  const defaultFromAddress = env.SMTP_FROM_ADDRESS || user;
   mailOptions.from = `"${defaultFromName}" <${defaultFromAddress}>`;
 
   console.log(`[Email Utility] Sending email to ${to} via ${host}:${port}...`);

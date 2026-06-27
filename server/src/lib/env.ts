@@ -11,6 +11,10 @@ const envSchema = z.object({
   REDIS_PORT: z.string().optional(),
   REDIS_PASSWORD: z.string().optional(),
 
+  // JWT
+  JWT_SECRET: z.string().min(1, "JWT_SECRET is required"),
+  JWT_EXPIRES_IN: z.string().default("7d"),
+
   // AI Providers (all accessed via their OpenAI-compatible endpoints)
   OPENAI_API_KEY: z.string().optional(),
   QWEN_API_KEY: z.string().optional(),
@@ -27,6 +31,13 @@ const envSchema = z.object({
   IMAP_PORT: z.string().optional(),
   IMAP_USER: z.string().optional(),
   IMAP_PASS: z.string().optional(),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.string().optional(),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_SECURE: z.string().optional(),
+  SMTP_FROM_NAME: z.string().optional(),
+  SMTP_FROM_ADDRESS: z.string().optional(),
 
   // Calendly
   CALENDLY_LINK: z.string().url().optional(),
