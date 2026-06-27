@@ -26,6 +26,7 @@ export interface IAgency extends Document {
 
     settings: {
         timezone: string;
+        autoReplyEnabled?: boolean;
     };
 
     password?: string;
@@ -62,6 +63,7 @@ const AgencySchema = new Schema<IAgency>(
 
         settings: {
             timezone: { type: String, default: "UTC" },
+            autoReplyEnabled: { type: Boolean, default: true },
         },
 
         password: { type: String, required: true, trim: true, select: false },

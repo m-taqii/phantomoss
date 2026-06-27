@@ -31,15 +31,23 @@ export interface ICampaign extends Document {
       competitorContext: string;
     };
     reply: {
-      objectionHandling: Record<string, string>;
-      qualificationQuestions: string[];
+      guidelines: string;
+      objectionApproaches: Record<string, string>;
       bookingTriggers: string[];
+      instructions: string;
     };
     targetCities: string[];
     currentCityIndex: number;
     usedQueries: string[];
     summary: string;
     generatedAt: Date;
+  };
+
+  hunterState?: {
+    currentRegionIndex: number;  // which city in strategy.targetCities is active
+    currentQuery?: string;       // the active query (so we can resume if interrupted)
+    currentOffset: number;       // search result page offset (for deep pagination)
+    exhaustedRegions: string[];  // regions/cities the Hunter has fully exhausted
   };
   // Hunt config — what Hunter agent uses
   target: {
@@ -81,6 +89,7 @@ export interface ICampaign extends Document {
 
   nextRunAt?: Date;
   lastRunAt?: Date;
+  lastLearnerTriggerAt?: number; // emailsSent count when Learner was last triggered
   createdAt: Date;
   updatedAt: Date;
 }
@@ -112,15 +121,23 @@ const CampaignSchema = new Schema<ICampaign>(
         competitorContext: { type: String },
       },
       reply: {
-        objectionHandling: { type: Schema.Types.Mixed, default: {} },
-        qualificationQuestions: [{ type: String }],
+        guidelines: { type: String, default: "" },
+        objectionApproaches: { type: Schema.Types.Mixed, default: {} },
         bookingTriggers: [{ type: String }],
+        instructions: { type: String, default: "" },
       },
       targetCities: [{ type: String }],
       currentCityIndex: { type: Number, default: 0 },
       usedQueries: [{ type: String }],
       summary: { type: String },
       generatedAt: { type: Date },
+    },
+
+    hunterState: {
+      currentRegionIndex: { type: Number, default: 0 },
+      currentQuery: { type: String },
+      currentOffset: { type: Number, default: 0 },
+      exhaustedRegions: [{ type: String }],
     },
     status: {
       type: String,
@@ -167,6 +184,7 @@ const CampaignSchema = new Schema<ICampaign>(
 
     nextRunAt: { type: Date },
     lastRunAt: { type: Date },
+    lastLearnerTriggerAt: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

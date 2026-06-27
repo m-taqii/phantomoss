@@ -2,7 +2,7 @@ import mongoose, { Schema, Document } from "mongoose";
 
 export type LeadStatus =
   | "discovered"    // Hunter found it
-  | "researched"    // Researcher enriched it
+  | "researched"    // Researcher enriched it — ready for outreach
   | "approved"      // human approved for outreach
   | "queued"        // in sending queue
   | "contacted"     // first email sent
@@ -41,7 +41,7 @@ export interface ILead extends Document {
     name?: string;
     title?: string;
     email?: string;
-    emailConfidence: number;     // 0-100, how confident we are the email is valid
+    emailConfidence: number;
     emailSource: "scraped" | "guessed" | "verified" | "manual" | "corrected";
     phone?: string;
     linkedin?: string;
@@ -50,20 +50,21 @@ export interface ILead extends Document {
     phoneSource?: string;
   };
 
-  // Researcher output — the intelligence that makes outreach personal
+  // Researcher output
   research: {
-    painPoints: string[];        // identified problems we can solve
-    recentActivity: string[];    // recent news, posts, launches
-    techStack: string[];         // tools they use, signals for pitch angle
+    painPoints: string[];
+    recentActivity: string[];
+    techStack: string[];
     competitors: string[];
-    summary: string;             // 2-3 sentence brief for the Outreach agent
+    summary: string;          // 2-3 sentence brief for the Outreach agent
+    businessBrief: string;    // what they do + how WE can specifically help them
     researchedAt?: Date;
   };
 
   // Outreach tracking
   status: LeadStatus;
   source: "google_maps" | "google_search" | "ddg_search" | "directory" | "manual";
-  score: number;                 // 0-100, set by Researcher based on fit
+  score: number;
   lastContactedAt?: Date;
   followUpCount: number;
 
@@ -72,7 +73,7 @@ export interface ILead extends Document {
   humanNotes?: string;
 
   // Dedup
-  fingerprint: string;           // hash of domain — prevents duplicate leads
+  fingerprint: string;
 
   createdAt: Date;
   updatedAt: Date;
@@ -121,6 +122,7 @@ const LeadSchema = new Schema<ILead>(
       techStack: [{ type: String }],
       competitors: [{ type: String }],
       summary: { type: String, default: "" },
+      businessBrief: { type: String, default: "" },
       researchedAt: { type: Date },
     },
 
@@ -151,7 +153,7 @@ const LeadSchema = new Schema<ILead>(
   { timestamps: true }
 );
 
-// Prevent duplicate leads
+// Indexes
 LeadSchema.index({ fingerprint: 1 }, { unique: true });
 LeadSchema.index({ status: 1 });
 LeadSchema.index({ campaignId: 1, status: 1 });
