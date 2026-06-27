@@ -1,0 +1,173 @@
+@import "tailwindcss";
+
+html {
+  scroll-behavior: smooth;
+}
+
+:root {
+  --background: #050508;
+  --foreground: #f4f4f5;
+  --muted-foreground: #a1a1aa;
+  --card: #0a0a0f;
+  --secondary: #121216;
+  --border: #1f1f2e;
+  --accent: #D4FF00;
+  --accent-glow: rgba(212, 255, 0, 0.15);
+  --accent-rgb: 212, 255, 0;
+  --primary: #ffffff;
+}
+
+.dark {
+  --background: #050508;
+  --foreground: #f4f4f5;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-card: var(--card);
+  --color-secondary: var(--secondary);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --font-sans: var(--font-space-grotesk);
+  --font-display: var(--font-syne);
+  
+  --animate-scanline: scanline 8s linear infinite;
+  --animate-marquee: marquee 30s linear infinite;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-pulse-slow: pulse-slow 4s ease-in-out infinite;
+  --animate-border-glow: border-glow 3s ease-in-out infinite;
+}
+
+/* Custom Keyframes */
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(0.5deg); }
+}
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 0.15; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(1.05); }
+}
+
+@keyframes border-glow {
+  0%, 100% { border-color: rgba(var(--accent-rgb), 0.1); }
+  50% { border-color: rgba(var(--accent-rgb), 0.4); }
+}
+
+/* Global scrollbar hide */
+* {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+*::-webkit-scrollbar {
+  display: none !important;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), sans-serif;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+}
+
+h1, h2, h3, h4, h5, h6, .font-display {
+  font-family: var(--font-display), sans-serif;
+}
+
+/* Modern Scanline Effect */
+.scanline {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    transparent 50%,
+    rgba(212, 255, 0, 0.01) 50%
+  );
+  background-size: 100% 4px;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Noise Texture Overlay */
+.noise-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: url("https://grainy-gradients.vercel.app/noise.svg");
+  opacity: 0.08;
+  pointer-events: none;
+  z-index: 9998;
+  filter: contrast(180%) brightness(80%);
+}
+
+/* Glowing Border Effect for Cards */
+.glow-border {
+  position: relative;
+  background: rgba(10, 10, 15, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
+.glow-border::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  background: linear-gradient(45deg, rgba(var(--accent-rgb), 0.1), transparent, rgba(var(--accent-rgb), 0.2));
+  border-radius: inherit;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+.glow-border:hover::after {
+  opacity: 1;
+}
+.glow-border:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Neon Text Glow */
+.text-glow {
+  text-shadow: 0 0 10px rgba(212, 255, 0, 0.3), 0 0 20px rgba(212, 255, 0, 0.1);
+}
+
+/* Abstract Mesh Gradient Background */
+.mesh-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 50% 0%, rgba(212, 255, 0, 0.08) 0%, transparent 50%),
+              radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.02) 0%, transparent 40%);
+  z-index: 0;
+  pointer-events: none;
+}
