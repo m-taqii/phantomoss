@@ -22,7 +22,7 @@ The result: a self-sustaining acquisition loop that runs while you sleep.
 
 ## The Phantom Protocol
 
-Phantom orchestrates five highly specialized, state-aware AI agents through a distributed job queue. Each agent picks up where the last one left off, enriching lead state as it moves through the pipeline.
+Phantom orchestrates six highly specialized, state-aware AI agents through a distributed job queue. Each agent picks up where the last one left off, enriching lead state as it moves through the pipeline.
 
 ### 1. Strategist Agent
 
@@ -36,17 +36,17 @@ The Strategist analyzes your agency profile - services, target industries, uniqu
 
 **Role:** Autonomous Lead Discovery Node.
 
-The Hunter takes the Strategist's search angles and goes hunting. It generates targeted queries, scrapes DuckDuckGo, Google Maps, and other search engines, then scores every candidate against the strategy's qualification criteria using LLM reasoning. Bad fits get cut. Strong matches move forward.
+The Hunter takes the Strategist's search angles and acts as a pure discovery engine. It uses the Serper (Google Search) API to generate targeted queries and find high-intent domain URLs. It then runs them through a strict, dynamic anti-portal/directory filter to ensure only actual business websites enter the pipeline.
 
-**Output:** Scraped lead candidates enriched with contact details, qualified and scored (0–100) against the Strategist's criteria.
+**Output:** A high-volume list of targeted, raw lead candidates ready for qualification.
 
 ### 3. Researcher Agent
 
-**Role:** Deep Technical and Capability Enrichment.
+**Role:** Deep Technical Enrichment and Qualification.
 
-The Researcher crawls each qualified lead's website using Jina Reader to fetch full markdown pages. It maps specific technical gaps, hiring signals, and pain points back to your value proposition, finding the exact angles that make outreach feel like a conversation, not a pitch.
+The Researcher crawls each discovered lead's website using Jina Reader to fetch full markdown pages. It acts as the primary qualification filter: scoring the lead against the strategy, mapping specific technical gaps and pain points, and combining AI website extraction with the Hunter.io API to extract and verify decision-maker contact details.
 
-**Output:** Enriched lead profiles containing verified pain-point hypotheses and bespoke research context.
+**Output:** Enriched lead profiles containing decision-maker contacts, verified pain-point hypotheses, and custom research context.
 
 ### 4. Outreacher Agent
 
@@ -64,6 +64,14 @@ The Reply Handler polls your inbox via IMAP, classifies every inbound response (
 
 **Output:** Auto-drafted replies and direct booking updates in the database.
 
+### 6. Learner Agent
+
+**Role:** Continuous Feedback and Strategy Optimization.
+
+The Learner analyzes the outcomes of your outreach—which messages booked calls, which angles failed, and what specific objections leads raised in their replies. It persists these insights into the memory vault and triggers the Strategist to dynamically refine and update the live campaign strategy based on real-world data.
+
+**Output:** Actionable campaign learnings and strategy update triggers.
+
 ### Lead Lifecycle
 
 ```mermaid
@@ -71,9 +79,11 @@ graph TD
     A[Campaign Activated] --> B[Strategize]
     B -->|Strategy Generated| C[Hunt]
     C -->|Leads Discovered| D[Research]
-    D -->|Leads Enriched| E[Outreach]
+    D -->|Qualified & Enriched| E[Outreach]
     E -->|Emails Sent| F[Reply Polling]
     F -->|Response Classified| G[Booked / Replied / Closed]
+    G -.->|Outcomes Analyzed| H[Learn]
+    H -.->|Strategy Refined| B
 ```
 
 ---
@@ -153,6 +163,20 @@ AI_API_KEY=<your-api-key>
 # AI_BASE_URL=https://dashscope-intl.aliyuncs.com/compatible-mode/v1
 # AI_FAST_MODEL=qwen3.7-plus
 # AI_SMART_MODEL=qwen3.7-max
+
+# Data APIs
+SERPER_API_KEY=<your-serper-api-key>
+HUNTER_API_KEY=<your-hunterio-api-key>
+
+# Email Configuration (SMTP for sending, IMAP for reply polling)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=you@youragency.com
+SMTP_PASS=app_password
+IMAP_HOST=imap.gmail.com
+IMAP_PORT=993
+IMAP_USER=you@youragency.com # Falls back to SMTP_USER if omitted
+IMAP_PASS=app_password       # Falls back to SMTP_PASS if omitted
 ```
 
 Create a `.env` file in the `client/` directory:
@@ -191,11 +215,20 @@ The Phantom dashboard will be live at `http://localhost:3000`.
 | `MONGODB_URI` | Yes | MongoDB connection string |
 | `REDIS_URL` | Yes | Redis connection string |
 | `JWT_SECRET` | Yes | Secret key for JWT token signing |
-| `ENCRYPTION_KEY` | Yes | 32-byte hex string for encrypting stored email credentials |
+| `SMTP_HOST` | Yes | SMTP server hostname for outbound emails |
+| `SMTP_PORT` | No | SMTP server port (defaults to 587) |
+| `SMTP_USER` | Yes | SMTP authentication username |
+| `SMTP_PASS` | Yes | SMTP authentication password / app password |
+| `IMAP_HOST` | Yes | IMAP server hostname for inbound reply polling |
+| `IMAP_PORT` | No | IMAP server port (defaults to 993) |
+| `IMAP_USER` | No | IMAP username (defaults to SMTP_USER if omitted) |
+| `IMAP_PASS` | No | IMAP password (defaults to SMTP_PASS if omitted) |
 | `AI_API_KEY` | Yes | API key for the AI provider |
 | `AI_BASE_URL` | No | Custom OpenAI-compatible endpoint (defaults to Alibaba DashScope) |
 | `AI_FAST_MODEL` | No | Model name for the fast tier (defaults to `qwen3.7-plus`) |
 | `AI_SMART_MODEL` | No | Model name for the smart tier (defaults to `qwen3.7-max`) |
+| `SERPER_API_KEY` | Yes | API key for Serper.dev Google Search integration |
+| `HUNTER_API_KEY` | Yes | API key for Hunter.io email discovery and verification |
 
 ---
 
@@ -213,7 +246,7 @@ phantom/
 │       ├── controllers/     # Route handlers
 │       ├── middleware/      # custom middleware
 │       ├── engine/
-│       │   ├── agents/      # Agent implementations (strategist, hunter, researcher, outreacher, reply)
+│       │   ├── agents/      # Agent implementations (strategist, hunter, researcher, outreacher, inbox_handler, learner)
 │       │   ├── workers/     # BullMQ worker definitions
 │       │   └── queue.ts     # Queue factory and configuration
 │       ├── lib/             # Core utilities (AI router, Redis, env)
