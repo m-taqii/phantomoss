@@ -1,6 +1,6 @@
 import { START, END, StateGraph } from "@langchain/langgraph";
 import { LearnerStateAnnotation } from "./state";
-import { analyzeNode } from "./nodes/analyze.node";
+import { analyzeNode } from "./nodes/analyze.node.ts";
 
 const learnerGraph = new StateGraph(LearnerStateAnnotation)
   .addNode("analyze", analyzeNode)

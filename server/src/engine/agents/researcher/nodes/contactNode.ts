@@ -1,6 +1,9 @@
 import type { ResearcherState } from "../state";
 import { getLLM } from "../../../../lib/ai";
 import { z } from "zod";
+import { findDomainEmails } from "../../../../services/hunterio.service";
+import { ContactOutputSchema } from "../../../../schemas/research.schema";
+import { buildContactPrompt } from "../prompts";
 
 /*
   CONTACT NODE (Researcher Agent)
@@ -75,80 +78,52 @@ function extractContactHints(content: string): {
   };
 }
 
-// ── Zod schema for LLM output ────────────────────────────────────────────────
-
-const ContactOutputSchema = z.object({
-  name: z.string().nullable().optional(),
-  title: z.string().nullable().optional(),
-  email: z.string().nullable().optional(),
-  emailGuessed: z.boolean().default(false),
-  phone: z.string().nullable().optional(),
-  linkedin: z.string().nullable().optional(),
-  instagram: z.string().nullable().optional(),
-  whatsapp: z.string().nullable().optional(),
-});
-
-// ── LLM contact extraction ────────────────────────────────────────────────────
-
-function buildContactPrompt(content: string, hints: ReturnType<typeof extractContactHints>, domain: string): string {
-  const hintLines: string[] = [];
-  if (hints.emails.length > 0) hintLines.push(`Emails found: ${hints.emails.join(", ")}`);
-  if (hints.phones.length > 0) hintLines.push(`Phones found: ${hints.phones.join(", ")}`);
-  if (hints.socialLinks.length > 0) {
-    for (const s of hints.socialLinks) hintLines.push(`${s.platform}: ${s.url}`);
-  }
-
-  return `
-<role>
-You are a B2B contact intelligence specialist. Your job is to identify the decision-maker (Owner, Founder, CEO, Managing Director) of a business and extract their contact information.
-</role>
-
-<task>
-Analyze the website content for "${domain}" and return structured contact data.
-</task>
-
-${hintLines.length > 0 ? `<pre_extracted_hints>
-${hintLines.join("\n")}
-</pre_extracted_hints>` : ""}
-
-<website_content>
-${content.slice(0, 15000)}
-</website_content>
-
-<rules>
-- Priority 1: Find the decision-maker's PERSONAL contact (name, email, phone, LinkedIn)
-- Priority 2: Fall back to business email (info@, hello@, contact@) from the pre-extracted hints
-- Priority 3: GUESS using pattern info@${domain} — set emailGuessed: true
-- NEVER return null for email — always use the fallback chain above
-- Extract ALL available contact channels (phone, linkedin, instagram, whatsapp)
-</rules>
-
-<output_format>
-Return ONLY a valid JSON object. No explanation. No markdown.
-{"name":null,"title":null,"email":"info@${domain}","emailGuessed":true,"phone":null,"linkedin":null,"instagram":null,"whatsapp":null}
-</output_format>`;
-}
-
-// ── Node export ───────────────────────────────────────────────────────────────
-
 const MAX_RETRIES = 3;
 
+
 export async function contactNode(state: ResearcherState): Promise<Partial<ResearcherState>> {
+  const domain = state.company.domain;
+
+  // 1. Call Hunter.io to get verified emails
+  const hunterEmails = await findDomainEmails(domain);
+  const personalEmail = hunterEmails.find(e => e.type === "personal" && (e.position?.toLowerCase().includes("ceo") || e.position?.toLowerCase().includes("founder") || e.position?.toLowerCase().includes("owner") || e.position?.toLowerCase().includes("director")));
+  const bestHunterEmail = personalEmail || hunterEmails.find(e => e.type === "personal") || hunterEmails[0];
+
+  if (bestHunterEmail) {
+    console.log(`[ContactNode] Hunter.io found email: ${bestHunterEmail.value} (${bestHunterEmail.type})`);
+  }
+
   if (!state.scrapedContent) {
-    console.log("[ContactNode] No scraped content — skipping contact extraction.");
+    console.log("[ContactNode] No scraped content — skipping LLM contact extraction.");
+    if (bestHunterEmail) {
+      return {
+        contact: {
+          ...state.contact,
+          email: bestHunterEmail.value,
+          name: bestHunterEmail.first_name ? `${bestHunterEmail.first_name} ${bestHunterEmail.last_name || ""}`.trim() : undefined,
+          title: bestHunterEmail.position,
+          linkedin: bestHunterEmail.linkedin,
+          emailSource: "verified"
+        }
+      };
+    }
     return {};
   }
 
-  const domain = state.company.domain;
   const hints = extractContactHints(state.scrapedContent);
+  if (bestHunterEmail) {
+    hints.emails.unshift(bestHunterEmail.value);
+  }
 
   console.log(`[ContactNode] Hints for ${domain}: ${hints.emails.length} emails, ${hints.phones.length} phones, ${hints.socialLinks.length} social links`);
 
   const prompt = buildContactPrompt(state.scrapedContent, hints, domain);
 
+  let llmContact: any = null;
+
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      const llm = getLLM("fast");
+      const llm = getLLM("smart");
       const response = await llm.invoke([
         { role: "system", content: prompt },
         { role: "user", content: "Extract the contact details now." },
@@ -177,35 +152,47 @@ export async function contactNode(state: ResearcherState): Promise<Partial<Resea
         continue;
       }
 
-      const c = result.data;
-      console.log(`[ContactNode] Contact extracted for ${domain}: email=${c.email}, guessed=${c.emailGuessed}`);
-
-      // Merge into existing contact state
-      return {
-        contact: {
-          ...state.contact,
-          ...(c.name && { name: c.name }),
-          ...(c.title && { title: c.title }),
-          ...(c.email && { email: c.email }),
-          ...(c.phone && { phone: c.phone }),
-          ...(c.linkedin && { linkedin: c.linkedin }),
-          emailSource: c.emailGuessed ? "guessed" : "scraped",
-        },
-      };
+      llmContact = result.data;
+      console.log(`[ContactNode] LLM extracted: email=${llmContact.email}, guessed=${llmContact.emailGuessed}`);
+      break;
     } catch (error: any) {
       console.warn(`[ContactNode] Attempt ${attempt}: API error — ${error?.status ?? "unknown"}`);
       if (attempt < MAX_RETRIES) await new Promise(r => setTimeout(r, 1000 * attempt));
     }
   }
 
-  // Final fallback — guess email from domain
+  // Final fallback — guess email from domain if both Hunter and LLM failed
   const guessedEmail = `info@${domain.replace(/^www\./, "")}`;
-  console.warn(`[ContactNode] All attempts failed — falling back to guessed email: ${guessedEmail}`);
+  
+  // Decide the final email to use (Priority: Hunter.io Personal -> Hunter.io Generic -> LLM Scraped -> Guessed)
+  let finalEmail = guessedEmail;
+  let finalSource: "verified" | "scraped" | "guessed" = "guessed";
+  let finalName = llmContact?.name;
+  let finalTitle = llmContact?.title;
+  let finalLinkedin = llmContact?.linkedin;
+
+  if (bestHunterEmail) {
+    finalEmail = bestHunterEmail.value;
+    finalSource = bestHunterEmail.type === "personal" ? "verified" : "scraped"; // treat generic hunter as scraped confidence
+    if (bestHunterEmail.first_name) {
+      finalName = `${bestHunterEmail.first_name} ${bestHunterEmail.last_name || ""}`.trim();
+    }
+    if (bestHunterEmail.position) finalTitle = bestHunterEmail.position;
+    if (bestHunterEmail.linkedin) finalLinkedin = bestHunterEmail.linkedin;
+  } else if (llmContact?.email && !llmContact.emailGuessed) {
+    finalEmail = llmContact.email;
+    finalSource = "scraped";
+  }
+
   return {
     contact: {
       ...state.contact,
-      email: state.contact.email ?? guessedEmail,
-      emailSource: "guessed",
+      ...(finalName && { name: finalName }),
+      ...(finalTitle && { title: finalTitle }),
+      email: finalEmail,
+      ...(llmContact?.phone && { phone: llmContact.phone }),
+      ...(finalLinkedin && { linkedin: finalLinkedin }),
+      emailSource: finalSource,
     },
   };
 }

@@ -113,3 +113,55 @@ Return ONLY a valid JSON object. No explanation. No markdown. No backticks.
 </output_format>
 `;
 };
+
+export function buildContactPrompt(
+  content: string, 
+  hints: { emails: string[], phones: string[], socialLinks: { platform: string, url: string }[] }, 
+  domain: string
+): string {
+  const hintLines: string[] = [];
+  if (hints.emails.length > 0) hintLines.push(`Emails found: ${hints.emails.join(", ")}`);
+  if (hints.phones.length > 0) hintLines.push(`Phones found: ${hints.phones.join(", ")}`);
+  if (hints.socialLinks.length > 0) {
+    for (const s of hints.socialLinks) hintLines.push(`${s.platform}: ${s.url}`);
+  }
+
+  return `
+<role>
+You are a B2B contact intelligence specialist. Your job is to identify the decision-maker (Owner, Founder, CEO, Managing Director) of a business and extract their contact information.
+</role>
+
+<task>
+Analyze the website content for "${domain}" and return structured contact data.
+</task>
+
+${hintLines.length > 0 ? `<pre_extracted_hints>
+${hintLines.join("\n")}
+</pre_extracted_hints>` : ""}
+
+<website_content>
+${content.slice(0, 15000)}
+</website_content>
+
+<rules>
+- Priority 1: Find the decision-maker's PERSONAL contact (name, email, phone, LinkedIn)
+- Priority 2: Fall back to business email (info@, hello@, contact@) from the pre-extracted hints
+- Priority 3: GUESS using pattern info@${domain} — set emailGuessed: true
+- NEVER return null for email — always use the fallback chain above
+- Extract ALL available contact channels (phone, linkedin, instagram, whatsapp)
+</rules>
+
+<output_format>
+Return ONLY a valid JSON object matching this structure. No explanation. No markdown.
+{
+  "name": "string | null (e.g. John Doe)",
+  "title": "string | null (e.g. CEO)",
+  "email": "string (the extracted or guessed email)",
+  "emailGuessed": "boolean (true ONLY if you guessed using info@domain)",
+  "phone": "string | null",
+  "linkedin": "string | null",
+  "instagram": "string | null",
+  "whatsapp": "string | null"
+}
+</output_format>`;
+}

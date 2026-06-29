@@ -10,7 +10,7 @@ export const ResearchOutputSchema = z.object({
   businessBrief: z.string().min(20),
   // Disqualification — true if score < 60 or no contact found
   disqualified: z.boolean().default(false),
-  disqualifyReason: z.string().optional(),
+  disqualifyReason: z.string().nullable().optional(),
   updatedContact: z.object({
     name: z.string().nullable().optional(),
     title: z.string().nullable().optional(),
@@ -24,3 +24,16 @@ export const ResearchOutputSchema = z.object({
 });
 
 export type ResearchOutput = z.infer<typeof ResearchOutputSchema>;
+
+export const ContactOutputSchema = z.object({
+  name: z.string().nullable().optional(),
+  title: z.string().nullable().optional(),
+  email: z.string().nullable().optional(),
+  emailGuessed: z.boolean().default(false),
+  phone: z.string().nullable().optional(),
+  linkedin: z.string().nullable().optional(),
+  instagram: z.string().nullable().optional(),
+  whatsapp: z.string().nullable().optional(),
+});
+
+export type ContactOutput = z.infer<typeof ContactOutputSchema>;

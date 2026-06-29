@@ -18,13 +18,13 @@ import { analyzeNode } from "./nodes/analyzeNode";
 */
 
 const researcherGraph = new StateGraph(ResearcherStateAnnotation)
-  .addNode("scrape",   scrapeNode)
-  .addNode("contact",  contactNode)
-  .addNode("analyze",  analyzeNode)
-  .addEdge(START,      "scrape")
-  .addEdge("scrape",   "contact")
-  .addEdge("contact",  "analyze")
-  .addEdge("analyze",  END)
+  .addNode("scrape", scrapeNode)
+  .addNode("extractContact", contactNode)
+  .addNode("analyze", analyzeNode)
+  .addEdge(START, "scrape")
+  .addEdge("scrape", "extractContact")
+  .addEdge("extractContact", "analyze")
+  .addEdge("analyze", END)
   .compile();
 
 export default researcherGraph;
