@@ -55,8 +55,14 @@ export default async function sendingNode(state: typeof OutreacherStateAnnotatio
 
         // Update lead status
         await Lead.findByIdAndUpdate(state.leadId, { 
-            status: "contacted", 
-            lastContactedAt: new Date() 
+            status: state.outreachType === "initial" ? "contacted" : "followed_up", 
+            lastContactedAt: new Date(),
+            $inc: { followUpCount: 1 }
+        });
+        
+        // Update campaign stats
+        await Campaign.findByIdAndUpdate(state.campaignId, {
+            $inc: { "stats.emailsSent": 1 }
         });
         
         console.log(`[SendingNode] Successfully sent ${state.outreachType} outreach for lead ${state.leadId}`);
