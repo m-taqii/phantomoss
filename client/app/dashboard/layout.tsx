@@ -12,14 +12,11 @@ const navItems = [
   { href: '/dashboard/campaigns', label: 'Campaigns', icon: Layers, section: 'Acquisition' },
   { href: '/dashboard/leads', label: 'Leads', icon: Users, section: 'Acquisition', badgeKey: 'leads', badgeColor: 'bg-accent text-black' },
   { href: '/dashboard/outreach', label: 'Outreach', icon: Home, section: 'Acquisition' },
-  { href: '/dashboard/agents', label: 'Agents', icon: Users, section: 'Agents' },
   { href: '/dashboard/memory', label: 'Memory', icon: FileText, section: 'Agents' },
-  { href: '/dashboard/replies', label: 'Replies', icon: Inbox, section: 'Inbox', badgeKey: 'replies', badgeColor: 'bg-red-500 text-white' },
-  { href: '/dashboard/proposals', label: 'Proposals', icon: Layers, section: 'Inbox' },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings, section: 'Configuration' },
 ]
 
-const sections = ['Acquisition', 'Agents', 'Inbox', 'Configuration']
+const sections = ['Acquisition', 'Agents', 'Configuration']
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)

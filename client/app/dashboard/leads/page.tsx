@@ -44,6 +44,11 @@ export default function LeadsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedLead, setSelectedLead] = useState<MappedLead | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
+
   const { toast } = useToast();
 
   const formatRelativeTime = (date: Date): string => {
@@ -238,6 +243,14 @@ export default function LeadsPage() {
     return matchesSearch && l.status === activeTab;
   });
 
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, activeTab]);
+
+  const totalPages = Math.ceil(filtered.length / pageSize);
+  const paginatedLeads = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   // Tab counts helper
   const getTabCount = (tab: string) => {
     if (tab === "all") return leads.length;
@@ -327,7 +340,7 @@ export default function LeadsPage() {
           <>
             {/* Mobile list view */}
             <div className="md:hidden divide-y divide-border/50">
-              {filtered.map((lead, idx) => {
+              {paginatedLeads.map((lead, idx) => {
                 const s = statusStyles[lead.status] || { label: lead.status, bg: 'bg-gray-500/10', text: 'text-gray-400', icon: Mail };
                 const StatusIcon = s.icon;
                 return (
@@ -396,7 +409,7 @@ export default function LeadsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/50">
-                  {filtered.map(lead => {
+                  {paginatedLeads.map(lead => {
                     const s = statusStyles[lead.status] || { label: lead.status, bg: 'bg-gray-500/10', text: 'text-gray-400', icon: Mail };
                     const StatusIcon = s.icon;
                     return (
@@ -505,6 +518,53 @@ export default function LeadsPage() {
                 </tbody>
               </table>
             </div>
+            
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-6 py-4 border-t border-border/50 bg-background/50">
+                <div className="text-sm text-muted-foreground">
+                  Showing <span className="font-medium text-foreground">{(currentPage - 1) * pageSize + 1}</span> to <span className="font-medium text-foreground">{Math.min(currentPage * pageSize, filtered.length)}</span> of <span className="font-medium text-foreground">{filtered.length}</span> leads
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1.5 text-sm font-medium border border-border rounded-md hover:bg-foreground/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Previous
+                  </button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                      .map((p, i, arr) => {
+                        if (i > 0 && arr[i - 1] !== p - 1) {
+                          return <span key={`ellipsis-${p}`} className="px-2 text-muted-foreground">...</span>;
+                        }
+                        return (
+                          <button
+                            key={p}
+                            onClick={() => setCurrentPage(p)}
+                            className={`w-8 h-8 flex items-center justify-center text-sm font-medium rounded-md transition-colors ${
+                              currentPage === p
+                                ? 'bg-accent text-accent-foreground'
+                                : 'hover:bg-foreground/5 text-muted-foreground hover:text-foreground'
+                            }`}
+                          >
+                            {p}
+                          </button>
+                        );
+                      })}
+                  </div>
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1.5 text-sm font-medium border border-border rounded-md hover:bg-foreground/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>

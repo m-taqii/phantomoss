@@ -110,7 +110,7 @@ const LoginPage = () => {
       {/* Background HUD elements */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(0,208,182,0.05),transparent_50%)] pointer-events-none" />
       <div className="grid-overlay" />
-      <div className="absolute top-4 left-6 text-[10px] text-white/30 font-mono tracking-widest hidden sm:block">
+      <div suppressHydrationWarning className="absolute top-4 left-6 text-[10px] text-white/30 font-mono tracking-widest hidden sm:block">
         PHANTOM_SECURE_AUTH_v1.0.8 // SYS_NODE: {typeof window !== 'undefined' ? window.location.hostname : 'SERVER'}
       </div>
       <Link href="/" className="absolute top-4 right-6 text-[10px] text-accent hover:text-white transition-colors tracking-widest font-bold z-15">

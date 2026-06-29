@@ -15,6 +15,7 @@ interface AgencyProfile {
   caseStudies: string[];
   settings: {
     timezone: string;
+    autoReplyEnabled: boolean;
   };
 }
 
@@ -277,6 +278,19 @@ export default function SettingsPage() {
                 <option value="AEST">AEST (Australian Eastern Time)</option>
                 <option value="GST">GST (Gulf Standard Time)</option>
               </select>
+            </div>
+
+            <div className="flex items-center justify-between pt-4 border-t border-border/50 mb-4">
+              <div>
+                <span className="block text-sm font-medium text-foreground">Auto-Reply Handler</span>
+                <span className="block text-[10px] text-muted-foreground mt-0.5">Allow agent to reply to interested leads</span>
+              </div>
+              <div 
+                onClick={() => updateField('settings', { ...profile.settings, autoReplyEnabled: !profile.settings?.autoReplyEnabled })}
+                className={`relative inline-block w-10 h-6 rounded-full cursor-pointer shrink-0 transition-colors ${profile.settings?.autoReplyEnabled !== false ? 'bg-accent' : 'bg-secondary border border-border'}`}
+              >
+                <span className={`absolute left-1 top-1 w-4 h-4 rounded-full bg-black transition-transform ${profile.settings?.autoReplyEnabled !== false ? 'translate-x-4' : 'translate-x-0'}`}></span>
+              </div>
             </div>
 
             <div className="flex items-center justify-between pt-4 border-t border-border/50">
