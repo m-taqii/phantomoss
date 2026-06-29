@@ -1,11 +1,13 @@
 import { Worker } from "bullmq";
-import { redisConnection } from "../../lib/redis";
+import { createRedisConnection } from "../../lib/redis";
 import { getQueue } from "../queue";
 import { startHunterWorker } from "./hunter.worker";
 import { startOutreacherWorker } from "./outreacher.worker";
 import { startLearnerWorker } from "./learner.worker";
 import { Campaign } from "../../models/campaign.model";
 import { Lead } from "../../models/lead.model";
+import { Agency } from "../../models/agency.model";
+import { toZonedTime, fromZonedTime } from "date-fns-tz";
 
 //Adds a random jitter to a Date (between 0 and maxMinutes)
 function addJitterToDate(date: Date, maxMinutes: number = 5): Date {
@@ -13,8 +15,12 @@ function addJitterToDate(date: Date, maxMinutes: number = 5): Date {
     return new Date(date.getTime() + jitterMs);
 }
 
-// A single global worker for the scheduler control plane
-export const schedulerWorker = new Worker("scheduler-jobs", async (job) => {
+let schedulerWorkerInstance: Worker | null = null;
+
+export function startSchedulerWorker(): Worker {
+  if (schedulerWorkerInstance) return schedulerWorkerInstance;
+
+  schedulerWorkerInstance = new Worker("scheduler-jobs", async (job) => {
     console.log(`[Scheduler Worker] Processing scheduled trigger ${job.id}`);
     const { campaignId } = job.data;
 
@@ -93,16 +99,24 @@ export const schedulerWorker = new Worker("scheduler-jobs", async (job) => {
         });
     }
 
-    // 6. Schedule the next day's run recursively
-    const nextRun = new Date();
-    nextRun.setDate(nextRun.getDate() + 1); // Next day
+    // 6. Schedule the next day's run recursively using the Agency's Timezone
+    const agency = await Agency.findOne();
+    const tz = agency?.settings?.timezone || "UTC";
+
+    // Convert current time to the target timezone
+    const nowInTz = toZonedTime(new Date(), tz);
     
-    // Align with campaign sending hours if defined
+    // Advance to next day in that local timezone
+    nowInTz.setDate(nowInTz.getDate() + 1);
+    
+    // Align with campaign sending hours if defined (e.g., 9 AM local time)
     if (campaign.schedule?.schedule !== undefined) {
-        nextRun.setHours(campaign.schedule.schedule, 0, 0, 0);
+        nowInTz.setHours(campaign.schedule.schedule, 0, 0, 0);
     }
     
-    const jitteredNextRun = addJitterToDate(nextRun, 5); // up to 5 mins jitter
+    // Convert back to absolute UTC Date for precise delay calculation
+    const nextRunUTC = fromZonedTime(nowInTz, tz);
+    const jitteredNextRun = addJitterToDate(nextRunUTC, 5); // up to 5 mins jitter
 
     // Update DB
     campaign.nextRunAt = jitteredNextRun;
@@ -118,11 +132,17 @@ export const schedulerWorker = new Worker("scheduler-jobs", async (job) => {
     );
     
     console.log(`[Scheduler] Recursively scheduled next run for Campaign ${campaignId} at ${jitteredNextRun}`);
-}, {
-    connection: redisConnection as any,
-    concurrency: 10, // Global dispatcher can handle many concurrently since it's lightweight
-});
+  }, {
+    connection: createRedisConnection() as any,
+    concurrency: 10,
+  });
 
-schedulerWorker.on("error", (err) => {
+  schedulerWorkerInstance.on("error", (err) => {
     console.error("[Scheduler Worker Error]", err);
-});
+  });
+
+  return schedulerWorkerInstance;
+}
+
+// Backwards-compatible export for existing code that references `schedulerWorker`
+export { schedulerWorkerInstance as schedulerWorker };

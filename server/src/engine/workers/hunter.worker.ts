@@ -1,5 +1,5 @@
 import { Worker } from "bullmq";
-import { redisConnection } from "../../lib/redis";
+import { createRedisConnection } from "../../lib/redis";
 import hunterGraph from "../agents/Hunter/graph";
 import { GetQueueName } from "../queue";
 import { Lead } from "../../models/lead.model";
@@ -51,14 +51,14 @@ export function startHunterWorker(): Worker {
           currentQuery: campaign.hunterState?.currentQuery,
           currentOffset: campaign.hunterState?.currentOffset ?? 0,
           exhaustedRegions: campaign.hunterState?.exhaustedRegions ?? [],
-        });
+        }, { recursionLimit: 150 });
 
       } catch (err) {
         console.error(`[Hunter Worker Error | ${queueName}]`, err);
         throw err;
       }
     }, {
-      connection: redisConnection as any,
+      connection: createRedisConnection() as any,
       concurrency: 2,
     });
 

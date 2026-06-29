@@ -1,5 +1,5 @@
 import { Worker } from "bullmq";
-import { redisConnection } from "../../lib/redis";
+import { createRedisConnection } from "../../lib/redis";
 import strategistGraph from "../agents/strategist/graph";
 import { GetQueueName, getQueue } from "../queue";
 import { Campaign } from "../../models/campaign.model";
@@ -84,6 +84,11 @@ export function startStrategistWorker(): Worker {
                         jobId: `scheduler-${campaign._id.toString()}`
                     }
                 );
+
+                // Wake up the scheduler worker to process the job
+                const { startSchedulerWorker } = await import("./scheduler.worker");
+                startSchedulerWorker();
+
                 console.log(`[Strategist Worker] Campaign ${campaignId} scheduled in scheduler queue with delay ${delay}ms.`);
 
             } catch (err) {
@@ -91,7 +96,7 @@ export function startStrategistWorker(): Worker {
                 throw err;
             }
         }, {
-            connection: redisConnection as any,
+            connection: createRedisConnection() as any,
             concurrency: 2,
         });
 

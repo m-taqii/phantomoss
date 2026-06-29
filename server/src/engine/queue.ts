@@ -1,7 +1,5 @@
 import { Queue, QueueEvents } from "bullmq";
-import { redisConnection } from "../lib/redis";
-
-const connection = redisConnection as any;
+import { createRedisConnection } from "../lib/redis";
 
 const defaultJobOptions = {
   attempts: 3,
@@ -24,14 +22,14 @@ const queueEventsCache = new Map<string, QueueEvents>();
 export function getQueue(agentType: string): Queue {
   if (agentType === "scheduler") {
     if (!queuesCache.has("scheduler-jobs")) {
-      queuesCache.set("scheduler-jobs", new Queue("scheduler-jobs", { connection, defaultJobOptions }));
+      queuesCache.set("scheduler-jobs", new Queue("scheduler-jobs", { connection: createRedisConnection() as any, defaultJobOptions }));
     }
     return queuesCache.get("scheduler-jobs")!;
   }
 
   const name = GetQueueName(agentType);
   if (!queuesCache.has(name)) {
-    queuesCache.set(name, new Queue(name, { connection, defaultJobOptions }));
+    queuesCache.set(name, new Queue(name, { connection: createRedisConnection() as any, defaultJobOptions }));
   }
   return queuesCache.get(name)!;
 }
@@ -40,7 +38,7 @@ export function getQueue(agentType: string): Queue {
 export function getQueueEvents(agentType: string): QueueEvents {
   const name = GetQueueName(agentType);
   if (!queueEventsCache.has(name)) {
-    queueEventsCache.set(name, new QueueEvents(name, { connection }));
+    queueEventsCache.set(name, new QueueEvents(name, { connection: createRedisConnection() as any }));
   }
   return queueEventsCache.get(name)!;
 }
