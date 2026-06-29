@@ -13,7 +13,8 @@ export type LeadStatus =
   | "converted"     // became a client
   | "not_interested"
   | "bounced"
-  | "unsubscribed";
+  | "unsubscribed"
+  | "disqualified";
 
 export interface ILead extends Document {
   campaignId: mongoose.Types.ObjectId;
@@ -63,8 +64,9 @@ export interface ILead extends Document {
 
   // Outreach tracking
   status: LeadStatus;
-  source: "google_maps" | "google_search" | "ddg_search" | "directory" | "manual";
+  source: "google_search" | "manual";
   score: number;
+  disqualifyReason?: string;
   lastContactedAt?: Date;
   followUpCount: number;
 
@@ -131,7 +133,7 @@ const LeadSchema = new Schema<ILead>(
       enum: [
         "discovered", "researched", "approved", "queued",
         "contacted", "followed_up", "replied", "call_booked",
-        "proposal_sent", "converted", "not_interested", "bounced", "unsubscribed",
+        "proposal_sent", "converted", "not_interested", "bounced", "unsubscribed", "disqualified"
       ],
       default: "discovered",
       index: true,
@@ -139,7 +141,7 @@ const LeadSchema = new Schema<ILead>(
 
     source: {
       type: String,
-      enum: ["google_maps", "google_search", "ddg_search", "directory", "manual"],
+      enum: ["google_search", "manual"],
       required: true,
     },
 
@@ -155,7 +157,6 @@ const LeadSchema = new Schema<ILead>(
 
 // Indexes
 LeadSchema.index({ fingerprint: 1 }, { unique: true });
-LeadSchema.index({ status: 1 });
 LeadSchema.index({ campaignId: 1, status: 1 });
 LeadSchema.index({ "contact.email": 1 });
 

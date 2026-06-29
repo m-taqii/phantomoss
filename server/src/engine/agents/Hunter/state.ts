@@ -34,6 +34,7 @@ export const HunterStateAnnotation = Annotation.Root({
       searchAngles: string[];
       qualificationCriteria: string[];
       disqualifiers: string[];
+      knownDirectories: string[];
     };
     targetCities?: string[];
   } | null>({
@@ -83,12 +84,12 @@ export const HunterStateAnnotation = Annotation.Root({
     default: () => [],
   }),
 
-  // Raw search results from DDG/Maps/Directory - just URL + title + snippet
+  // Raw search results from Serper - just URL + title + snippet
   rawResults: Annotation<Array<{
     url: string;
     title: string;
     snippet: string;
-    source: "ddg" | "maps" | "directory";
+    source: "google_search";
   }>>({
     reducer: (existing, incoming) => [...existing, ...incoming],
     default: () => [],

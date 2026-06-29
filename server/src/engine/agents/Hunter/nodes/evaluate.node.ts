@@ -36,10 +36,10 @@ export async function evaluateNode(state: HunterState): Promise<Partial<HunterSt
   if (queryExhausted) {
     console.log(`[EvaluateNode] Query exhausted. Advancing to next query. (${savedCount}/${targetCount} saved)`);
     // search.node already incremented queriesUsed, so next call will pick next query
-    return { queryExhausted: false, currentOffset: 0 };
+    return { queryExhausted: false, currentOffset: 1 };
   }
 
   // Still have pages to paginate on the current query — keep going
-  console.log(`[EvaluateNode] Looping — saved: ${savedCount}/${targetCount} | offset: ${state.currentOffset}`);
+  console.log(`[EvaluateNode] Looping — saved: ${savedCount}/${targetCount} | page: ${state.currentOffset}`);
   return {};
 }

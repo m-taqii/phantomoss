@@ -42,6 +42,10 @@ const envSchema = z.object({
   // Calendly
   CALENDLY_LINK: z.string().url().optional(),
 
+  // Discovery & Enrichment APIs
+  SERPER_API_KEY: z.string().optional(),
+  HUNTER_API_KEY: z.string().optional(),
+
   // App
   CLIENT_URL: z.string().url().default("http://localhost:3000"),
 });

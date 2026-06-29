@@ -43,23 +43,41 @@ export async function saveNode(state: HunterState): Promise<Partial<HunterState>
       fingerprint: string;
       title: string;
       snippet: string;
-      source: "ddg_search" | "google_maps" | "google_search" | "directory";
+      source: "google_search";
     }> = [];
+
+    // Global list of generic directories and portals to always block
+    const GLOBAL_DIRECTORIES = [
+      "yellowpages.com", "yelp.com", "bbb.org", "clutch.co", "upcity.com",
+      "thumbtack.com", "angi.com", "houzz.com", "expertise.com", "glassdoor.com",
+      "indeed.com", "linkedin.com", "facebook.com", "twitter.com", "instagram.com",
+      "pinterest.com", "capterra.com", "g2.com", "trustpilot.com"
+    ];
+
+    const dynamicDirectories = state.strategy?.icp?.knownDirectories || [];
+    const blockedDirectories = [...GLOBAL_DIRECTORIES, ...dynamicDirectories].map(d => d.toLowerCase().trim());
 
     for (const result of state.rawResults) {
       const parsed = extractDomain(result.url);
       if (!parsed) continue;
+      
+      // Filter out user-defined excluded domains
       if ((state.target.excludeDomains || []).includes(parsed.domain)) continue;
+      
+      // Filter out directories and portals (exact match or subdomain match)
+      if (blockedDirectories.some(dir => parsed.domain === dir || parsed.domain.endsWith(`.${dir}`))) {
+        continue;
+      }
+      
       if (seen.has(parsed.domain)) continue;
       seen.add(parsed.domain);
 
-      const source = result.source === "maps" ? "google_maps" : "ddg_search";
       candidates.push({
         ...parsed,
         fingerprint: generateFingerprint(parsed.domain),
         title: result.title,
         snippet: result.snippet,
-        source,
+        source: "google_search",
       });
     }
 
@@ -145,6 +163,10 @@ export async function saveNode(state: HunterState): Promise<Partial<HunterState>
       const researchQueue = getQueue("research");
       await researchQueue.addBulk(researchJobs);
       console.log(`[SaveNode] Enqueued ${saved} research jobs to ${researchQueue.name}.`);
+      
+      // Wake up the researcher worker
+      const { startResearcherWorker } = await import("../../../workers/researcher.worker");
+      startResearcherWorker();
     }
 
     return {

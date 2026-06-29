@@ -1,9 +1,5 @@
 import type { HunterState } from "../state";
-import { searchDDG } from "../../../../services/search.service";
-import { searchYellowpages } from "../../../../services/directory.service";
-
-// How many DDG pages to advance per run when the current query goes dry
-const PAGE_SIZE = 30;
+import { searchSerper } from "../../../../services/serper.service";
 
 export async function searchNode(state: HunterState): Promise<Partial<HunterState>> {
   try {
@@ -15,46 +11,56 @@ export async function searchNode(state: HunterState): Promise<Partial<HunterStat
       return { done: true };
     }
 
-    const offset = state.currentOffset ?? 0;
-    const directoryPage = Math.floor(offset / PAGE_SIZE) + 1;
+    // currentOffset now represents the Serper "page" (1, 2, 3...)
+    const page = state.currentOffset ? state.currentOffset : 1;
 
-    console.log(`[SearchNode] Query: "${nextQuery}" | DDG offset: ${offset} | YP page: ${directoryPage}`);
-
-    // Run DDG and Yellowpages in parallel to maximize discovery
-    const [ddgResults, ypResults] = await Promise.all([
-      searchDDG(nextQuery, offset),
-      searchYellowpages(nextQuery, "", directoryPage), // pass full query to search_terms, let YP parse it
-    ]);
-
-    const combinedResults = [...ddgResults, ...ypResults];
-
-    // If BOTH sources return 0 results, this page depth is completely exhausted for this query
-    if (combinedResults.length === 0) {
-      console.log(`[SearchNode] No results from any source for "${nextQuery}" at offset ${offset} — marking exhausted.`);
+    // Hard stop pagination at page 10 (1000 results) to prevent infinite loops
+    if (page >= 10) {
+      console.log(`[SearchNode] Reached max pagination depth (page ${page}) for "${nextQuery}" — marking exhausted.`);
       return {
-        queriesUsed: [nextQuery], // only mark as used if it's completely dead
+        queriesUsed: [nextQuery], // mark as fully explored
         currentQuery: undefined,
         queryExhausted: true,
-        currentOffset: 0, // reset offset for the next query
+        currentOffset: 1, // reset page for the next query
       };
     }
 
-    console.log(`[SearchNode] Found ${ddgResults.length} from DDG, ${ypResults.length} from Yellowpages`);
+    console.log(`[SearchNode] Query: "${nextQuery}" | Serper page: ${page}`);
 
-    // Advance the offset by PAGE_SIZE for the NEXT call on the same query
-    // (the evaluate node decides whether to loop back to search on the same query or advance)
+    // Call Serper API
+    const results = await searchSerper(nextQuery, page);
+
+    // If Serper returns 0 results, this query is exhausted
+    if (results.length === 0) {
+      console.log(`[SearchNode] No results from Serper for "${nextQuery}" at page ${page} — marking exhausted.`);
+      return {
+        queriesUsed: [nextQuery],
+        currentQuery: undefined,
+        queryExhausted: true,
+        currentOffset: 1, 
+      };
+    }
+
+    console.log(`[SearchNode] Found ${results.length} organic results from Serper`);
+
+    // Advance the page for the NEXT call on the same query
     return {
-      rawResults: combinedResults,
-      currentQuery: nextQuery, // keep it tracked as the active query
+      rawResults: results.map(r => ({
+        title: r.title,
+        url: r.link,
+        snippet: r.snippet,
+        source: "google_search"
+      })),
+      currentQuery: nextQuery,
       queryExhausted: false,
-      currentOffset: offset + PAGE_SIZE,
+      currentOffset: page + 1,
     };
 
   } catch (error) {
     console.error("[SearchNode] Error:", error);
     return {
       queryExhausted: true,
-      currentOffset: 0
+      currentOffset: 1
     };
   }
 }

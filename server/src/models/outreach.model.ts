@@ -112,7 +112,6 @@ const OutreachSchema = new Schema<IOutreach>(
   { timestamps: true }
 );
 
-OutreachSchema.index({ status: 1 });
 OutreachSchema.index({ leadId: 1, type: 1 });
 OutreachSchema.index({ scheduledFor: 1, status: 1 }); // for cron job queries
 OutreachSchema.index({ "nextAction.done": 1, "nextAction.scheduledFor": 1 });
