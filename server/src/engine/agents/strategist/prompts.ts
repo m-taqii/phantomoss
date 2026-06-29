@@ -125,6 +125,10 @@ Return ONLY a valid JSON object. No markdown. No backticks. No explanation outsi
       "Red flag that means this lead should be immediately filtered out",
       "Another disqualifier — e.g., too large, already has in-house team, wrong business model"
     ],
+    "knownDirectories": [
+      "Any major industry-specific directory, portal, or review site that might appear in search results (e.g. clutch.co, zillow.com, upcity.com, avvo.com)",
+      "This helps the Hunter filter out generic aggregators"
+    ],
     "instructions": "Specific tactical instructions for the Hunter agent. Example: 'Prioritize companies with fewer than 50 employees that have job postings for marketing roles — this signals they're scaling but don't have the expertise in-house yet.'"
   },
   "outreach": {

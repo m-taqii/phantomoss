@@ -16,6 +16,7 @@ export interface ICampaign extends Document {
       searchAngles: string[];
       qualificationCriteria: string[];
       disqualifiers: string[];
+      knownDirectories: string[];
     };
     outreach: {
       tone: string;
@@ -106,6 +107,7 @@ const CampaignSchema = new Schema<ICampaign>(
         searchAngles: [{ type: String }],
         qualificationCriteria: [{ type: String }],
         disqualifiers: [{ type: String }],
+        knownDirectories: [{ type: String }],
       },
       outreach: {
         tone: { type: String },

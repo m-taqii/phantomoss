@@ -6,6 +6,7 @@ export const CampaignStrategySchema = z.object({
     searchAngles: z.array(z.string().min(3)).min(3).max(10),
     qualificationCriteria: z.array(z.string().min(3)).min(2).max(8),
     disqualifiers: z.array(z.string().min(3)).min(1).max(8),
+    knownDirectories: z.array(z.string()).default([]),
     instructions: z.string().default(""),
   }),
 
