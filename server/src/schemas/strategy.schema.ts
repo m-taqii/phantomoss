@@ -27,8 +27,8 @@ export const CampaignStrategySchema = z.object({
   }),
 
   reply: z.object({
-    objectionHandling: z.record(z.string(), z.string()).default({}),
-    qualificationQuestions: z.array(z.string()).min(1).max(6),
+    guidelines: z.string().min(10),
+    objectionApproaches: z.record(z.string(), z.string()).default({}),
     bookingTriggers: z.array(z.string()).min(1).max(6),
     instructions: z.string().default(""),
   }),
