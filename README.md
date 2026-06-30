@@ -157,6 +157,10 @@ PORT=8080
 MONGODB_URI=mongodb://localhost:27017/phantomdb
 REDIS_URL=redis://localhost:6379
 JWT_SECRET=<your-jwt-secret>
+CLIENT_URL=http://localhost:3000
+
+# 64-character (32-byte) hex string used to encrypt/decrypt sensitive credentials stored in DB
+ENCRYPTION_KEY=0000000000000000000000000000000000000000000000000000000000000000
 
 # AI Provider (OpenAI-compatible)
 AI_API_KEY=<your-api-key>
@@ -215,6 +219,8 @@ The Phantom dashboard will be live at `http://localhost:3000`.
 | `MONGODB_URI` | Yes | MongoDB connection string |
 | `REDIS_URL` | Yes | Redis connection string |
 | `JWT_SECRET` | Yes | Secret key for JWT token signing |
+| `ENCRYPTION_KEY` | Yes | 64-character (32-byte) hex string for credential encryption |
+| `CLIENT_URL` | Yes | URL of the frontend client (defaults to http://localhost:3000) |
 | `SMTP_HOST` | Yes | SMTP server hostname for outbound emails |
 | `SMTP_PORT` | No | SMTP server port (defaults to 587) |
 | `SMTP_USER` | Yes | SMTP authentication username |
