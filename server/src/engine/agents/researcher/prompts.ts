@@ -53,7 +53,7 @@ ${hasStrategy ? `
 ` : ""}
 
 <website_content>
-${state.scrapedContent.slice(0, 15000)}
+${state.scrapedContent}
 </website_content>
 
 <task>
@@ -140,7 +140,7 @@ ${hintLines.join("\n")}
 </pre_extracted_hints>` : ""}
 
 <website_content>
-${content.slice(0, 15000)}
+${content}
 </website_content>
 
 <rules>

@@ -9,12 +9,8 @@ import urlReader from "../../../../services/extractor.service";
   to build a comprehensive content profile for LLM analysis.
  */
 
-// Character budgets per section — keeps total under LLM token limits
-const MAIN_PAGE_CHARS = 5000;
-const SUB_PAGE_CHARS = 3000;
-
 /*
- Finds internal subpage links relevant to research from the homepage markdown.
+  Finds internal subpage links relevant to research from the homepage markdown.
  */
 function findResearchableUrls(homepageContent: string, baseUrl: string): string[] {
   const urls: string[] = [];
@@ -25,7 +21,7 @@ function findResearchableUrls(homepageContent: string, baseUrl: string): string[
 
     const keywords = [
       "about", "services", "team", "contact", "portfolio", "work",
-      "clients", "case-stud", "pricing", "solutions", "capabilities",
+      "clients", "case-study", "pricing", "solutions", "capabilities",
       "what-we-do", "our-work", "careers", "blog",
     ];
 
@@ -84,7 +80,7 @@ export async function scrapeNode(
     const sections: string[] = [];
 
     // 3. Main page content
-    sections.push(`=== HOMEPAGE: ${website} ===\n${mainContent.slice(0, MAIN_PAGE_CHARS)}`);
+    sections.push(`=== HOMEPAGE: ${website} ===\n${mainContent}`);
 
     let pagesScraped = 1;
 
@@ -97,7 +93,7 @@ export async function scrapeNode(
             const subContent = await urlReader(subUrl);
             if (subContent && subContent.trim().length > 50) {
               pagesScraped++;
-              return `\n=== SUBPAGE: ${subUrl} ===\n${subContent.slice(0, SUB_PAGE_CHARS)}`;
+              return `\n=== SUBPAGE: ${subUrl} ===\n${subContent}`;
             }
             return "";
           } catch {
