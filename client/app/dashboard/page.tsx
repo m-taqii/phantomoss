@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { CheckCircle2, MessageSquare, Plus, Mail } from 'lucide-react'
 import { CreateCampaignModal } from '@/components/dashboard/create-campaign-modal'
 import axios from 'axios'
+import { useDashboardStore } from '@/store/useDashboardStore'
 
 function SearchIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -27,19 +28,7 @@ function SearchIcon(props: React.SVGProps<SVGSVGElement>) {
 
 const Page = () => {
   const [showCreate, setShowCreate] = useState(false);
-  const [campaigns, setCampaigns] = useState<any[]>([]);
-
-  useEffect(() => {
-    const fetchDashboard = async () => {
-      try {
-        const res = await axios.get(`${process.env.NEXT_PUBLIC_BASE_URL}/api/campaigns`, { withCredentials: true });
-        setCampaigns(res.data.campaigns || []);
-      } catch (err) {
-        console.error("Failed to fetch campaigns:", err);
-      }
-    };
-    fetchDashboard();
-  }, []);
+  const campaigns = useDashboardStore(state => state.campaigns) || [];
 
   const totalLeads = campaigns.reduce((acc, c) => acc + (c.stats?.leadsFound || 0), 0);
   const totalEmails = campaigns.reduce((acc, c) => acc + (c.stats?.emailsSent || 0), 0);

@@ -1,11 +1,9 @@
 "use client"
 
-import React, { useEffect, useState } from 'react';
-import { 
-  Search, Filter, Upload, Download, Mail, 
-  MapPin, Globe, CheckCircle2, Check, Loader2, Trash2, Eye 
-} from 'lucide-react';
+import React, { useEffect, useState, useMemo } from 'react';
+import { Download, Search, CheckCircle2, Building2, MapPin, Globe, Sparkles, Filter, X, Zap, Mail, Loader2, Trash2, Eye, Upload, Check } from 'lucide-react';
 import axios from 'axios';
+import { useDashboardStore } from '@/store/useDashboardStore';
 import { useToast } from '@/hooks/use-toast';
 import { statusStyles, LeadStatus } from '@/lib/data/leads';
 import { LeadDetailsModal } from '@/components/dashboard/lead-details-modal';
@@ -40,8 +38,6 @@ interface MappedLead {
 export default function LeadsPage() {
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<string>("all");
-  const [leads, setLeads] = useState<MappedLead[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedLead, setSelectedLead] = useState<MappedLead | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   
@@ -72,61 +68,39 @@ export default function LeadsPage() {
     return url.replace(/https?:\/\/(www\.)?/, "").replace(/\/$/, "");
   };
 
-  const fetchLeads = async () => {
-    try {
-      setLoading(true);
-      const response = await axios.get(`${process.env.NEXT_PUBLIC_BASE_URL}/api/leads`, {
-        withCredentials: true
-      });
-      
-      const fetched = response.data?.data || response.data;
-      if (Array.isArray(fetched) && fetched.length > 0) {
-        const mapped = fetched.map((lead: any) => ({
-          id: lead._id,
-          company: {
-            name: lead.company?.name || "Unknown Company",
-            website: lead.company?.website || "",
-            industry: lead.company?.industry || "Real Estate",
-            location: lead.company?.location || "",
-          },
-          contact: {
-            name: lead.contact?.name || "",
-            title: lead.contact?.title || "",
-            email: lead.contact?.email || "",
-            emailConfidence: lead.contact?.emailConfidence || 0,
-          },
-          research: {
-            summary: lead.research?.summary || "",
-            painPoints: lead.research?.painPoints || [],
-            recentActivity: lead.research?.recentActivity || [],
-            techStack: lead.research?.techStack || [],
-            competitors: lead.research?.competitors || [],
-          },
-          status: lead.status || "discovered",
-          score: lead.score || 0,
-          addedAt: lead.createdAt ? formatRelativeTime(new Date(lead.createdAt)) : "Just now",
-          raw: lead
-        }));
-        setLeads(mapped);
-      } else {
-        setLeads([]);
-      }
-    } catch (error) {
-      console.error("Failed to fetch leads:", error);
-      toast({
-        title: "Connection Failed",
-        description: "Unable to retrieve leads from the live protocol database. Displaying simulated local feed.",
-        type: "error"
-      });
-      setLeads([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const rawLeads = useDashboardStore(state => state.leads);
+  const fetchLeads = useDashboardStore(state => state.fetchLeads);
+  const loading = useDashboardStore(state => state.isFetchingLeads);
 
-  useEffect(() => {
-    fetchLeads();
-  }, []);
+  const leads = useMemo(() => {
+    if (!Array.isArray(rawLeads)) return [];
+    return rawLeads.map((lead: any) => ({
+      id: lead._id,
+      company: {
+        name: lead.company?.name || "Unknown Company",
+        website: lead.company?.website || "",
+        industry: lead.company?.industry || "Real Estate",
+        location: lead.company?.location || "",
+      },
+      contact: {
+        name: lead.contact?.name || "",
+        title: lead.contact?.title || "",
+        email: lead.contact?.email || "",
+        emailConfidence: lead.contact?.emailConfidence || 0,
+      },
+      research: {
+        summary: lead.research?.summary || "",
+        painPoints: lead.research?.painPoints || [],
+        recentActivity: lead.research?.recentActivity || [],
+        techStack: lead.research?.techStack || [],
+        competitors: lead.research?.competitors || [],
+      },
+      status: lead.status || "discovered",
+      score: lead.score || 0,
+      addedAt: lead.createdAt ? formatRelativeTime(new Date(lead.createdAt)) : "Just now",
+      raw: lead
+    }));
+  }, [rawLeads]);
 
   const handleApproveLead = async (leadId: string) => {
     try {
@@ -141,8 +115,8 @@ export default function LeadsPage() {
         type: "success"
       });
       
-      // Update local state
-      setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: 'approved' } : l));
+      // Refresh from store
+      await fetchLeads();
       if (selectedLead?.id === leadId) {
         setSelectedLead(prev => prev ? { ...prev, status: 'approved' } : null);
       }
@@ -169,7 +143,7 @@ export default function LeadsPage() {
         type: "success"
       });
 
-      setLeads(prev => prev.filter(l => l.id !== leadId));
+      await fetchLeads();
       setIsDetailsOpen(false);
       setSelectedLead(null);
     } catch (error) {
@@ -215,13 +189,7 @@ export default function LeadsPage() {
     document.body.removeChild(link);
   };
 
-  const handleImportToast = () => {
-    toast({
-      title: "CSV Import",
-      description: "Importing contacts is handled inside the Campaign Strategist launcher.",
-      type: "success"
-    });
-  };
+
 
   // Filtering
   const filtered = leads.filter(l => {
@@ -271,12 +239,6 @@ export default function LeadsPage() {
           <p className="text-xs md:text-sm text-muted-foreground">Manage and track your AI-discovered prospects.</p>
         </div>
         <div className="flex gap-2">
-          <button 
-            onClick={handleImportToast}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-secondary border border-border hover:bg-foreground/5 text-foreground font-medium px-3 md:px-4 py-2.5 rounded-lg transition-colors text-sm cursor-pointer"
-          >
-            <Upload className="w-4 h-4" /> <span className="hidden sm:inline">Import CSV</span><span className="sm:hidden">Import</span>
-          </button>
           <button 
             onClick={exportToCSV}
             className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-accent hover:bg-accent/80 text-black font-semibold px-3 md:px-4 py-2.5 rounded-lg transition-colors text-sm cursor-pointer"
@@ -341,7 +303,7 @@ export default function LeadsPage() {
             {/* Mobile list view */}
             <div className="md:hidden divide-y divide-border/50">
               {paginatedLeads.map((lead, idx) => {
-                const s = statusStyles[lead.status] || { label: lead.status, bg: 'bg-gray-500/10', text: 'text-gray-400', icon: Mail };
+                const s = statusStyles[lead.status as LeadStatus] || { label: lead.status, bg: 'bg-gray-500/10', text: 'text-gray-400', icon: Mail };
                 const StatusIcon = s.icon;
                 return (
                   <div 
@@ -410,7 +372,7 @@ export default function LeadsPage() {
                 </thead>
                 <tbody className="divide-y divide-border/50">
                   {paginatedLeads.map(lead => {
-                    const s = statusStyles[lead.status] || { label: lead.status, bg: 'bg-gray-500/10', text: 'text-gray-400', icon: Mail };
+                    const s = statusStyles[lead.status as LeadStatus] || { label: lead.status, bg: 'bg-gray-500/10', text: 'text-gray-400', icon: Mail };
                     const StatusIcon = s.icon;
                     return (
                       <tr 

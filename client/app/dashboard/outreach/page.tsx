@@ -3,36 +3,21 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, Mail, CheckCircle2, Clock, Plus, X } from 'lucide-react';
 import axios from 'axios';
+import { useDashboardStore } from '@/store/useDashboardStore';
 import { statusStyles, typeStyles } from '@/lib/data/outreach';
 
 export default function OutreachPage() {
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"all" | "sent" | "drafts">("all");
-  const [outreach, setOutreach] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const outreach = useDashboardStore(state => state.outreach) || [];
+  const fetchOutreach = useDashboardStore(state => state.fetchOutreach);
+  const loading = useDashboardStore(state => state.isFetchingOutreach);
 
   // Modal State
   const [selectedDraft, setSelectedDraft] = useState<any | null>(null);
   const [draftSubject, setDraftSubject] = useState("");
   const [draftBody, setDraftBody] = useState("");
   const [sending, setSending] = useState(false);
-
-  useEffect(() => {
-    fetchOutreach();
-  }, []);
-
-  const fetchOutreach = async () => {
-    try {
-      const res = await axios.get(`${process.env.NEXT_PUBLIC_BASE_URL}/api/outreach`, { withCredentials: true });
-      if (res.data.success) {
-        setOutreach(res.data.data);
-      }
-    } catch (err) {
-      console.error("Failed to fetch outreach", err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleApprove = async () => {
     if (!selectedDraft) return;

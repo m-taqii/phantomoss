@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Plus, Trash2, Mail, Unplug, Loader2, X } from 'lucide-react';
 import axios from 'axios';
+import { useDashboardStore } from '@/store/useDashboardStore';
 import { useToast } from '@/hooks/use-toast';
 
 interface AgencyProfile {
@@ -27,18 +28,15 @@ export default function SettingsPage() {
   const [newCaseStudy, setNewCaseStudy] = useState('');
   const { toast } = useToast();
 
-  const fetchProfile = async () => {
-    try {
-      const res = await axios.get(`${process.env.NEXT_PUBLIC_BASE_URL}/api/agency/profile`, { withCredentials: true });
-      setProfile(res.data.data);
-    } catch (err) {
-      toast({ title: "Error", description: "Failed to load profile.", type: "error" });
-    } finally {
+  const globalAgency = useDashboardStore(state => state.agency);
+  const fetchAgency = useDashboardStore(state => state.fetchAgency);
+
+  useEffect(() => {
+    if (globalAgency) {
+      setProfile(globalAgency);
       setLoading(false);
     }
-  };
-
-  useEffect(() => { fetchProfile(); }, []);
+  }, [globalAgency]);
 
   const handleSave = async () => {
     if (!profile) return;
@@ -54,6 +52,7 @@ export default function SettingsPage() {
         caseStudies: profile.caseStudies,
         settings: profile.settings,
       }, { withCredentials: true });
+      await fetchAgency(); // Refresh global state after update
       toast({ title: "Saved", description: "Settings updated successfully.", type: "success" });
     } catch (err) {
       toast({ title: "Error", description: "Failed to save settings.", type: "error" });

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import Image from 'next/image'
 import axios from 'axios'
+import { useDashboardStore } from '@/store/useDashboardStore'
 import { Home, BarChart2, Users, Layers, Inbox, FileText, Settings, ChevronDown, Menu, X } from 'lucide-react'
 
 const navItems = [
@@ -21,53 +22,35 @@ const sections = ['Acquisition', 'Agents', 'Configuration']
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const pathname = usePathname()
-  const [user, setUser] = useState<{name: string, email: string} | null>(null)
-  const [activeCampaigns, setActiveCampaigns] = useState(0)
+  
+  const { agency, leads, outreach, campaigns, fetchAll } = useDashboardStore()
   const [currentDate, setCurrentDate] = useState('Loading date...')
 
-  const [stats, setStats] = useState({ leads: 0, replies: 0 })
+  useEffect(() => {
+    fetchAll()
+  }, [fetchAll])
 
   useEffect(() => {
-    // Fetch User Profile
-    axios.get(`${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/me`, { withCredentials: true })
-      .then(res => {
-        if (res.data?.data?.agency) {
-          const agency = res.data.data.agency;
-          setUser({ 
-            name: agency.agencyName || 'Phantom Agency', 
-            email: agency.email || 'hello@phantom.site' 
-          })
-          
-          const tz = agency.settings?.timezone || 'UTC';
-          try {
-            const dateOptions: Intl.DateTimeFormatOptions = { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true, timeZone: tz };
-            setCurrentDate(new Intl.DateTimeFormat('en-US', dateOptions).format(new Date()));
-          } catch (e) {
-            const dateOptions: Intl.DateTimeFormatOptions = { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true };
-            setCurrentDate(new Intl.DateTimeFormat('en-US', dateOptions).format(new Date()));
-          }
-        }
-      })
-      .catch(console.error)
+    if (agency) {
+      const tz = agency.settings?.timezone || 'UTC';
+      try {
+        const dateOptions: Intl.DateTimeFormatOptions = { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true, timeZone: tz };
+        setCurrentDate(new Intl.DateTimeFormat('en-US', dateOptions).format(new Date()));
+      } catch (e) {
+        const dateOptions: Intl.DateTimeFormatOptions = { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true };
+        setCurrentDate(new Intl.DateTimeFormat('en-US', dateOptions).format(new Date()));
+      }
+    }
+  }, [agency])
 
-    // Fetch Stats for Badges & Campaigns
-    Promise.all([
-      axios.get(`${process.env.NEXT_PUBLIC_BASE_URL}/api/leads`, { withCredentials: true }).catch(() => ({ data: [] })),
-      axios.get(`${process.env.NEXT_PUBLIC_BASE_URL}/api/outreach`, { withCredentials: true }).catch(() => ({ data: [] })),
-      axios.get(`${process.env.NEXT_PUBLIC_BASE_URL}/api/campaigns`, { withCredentials: true }).catch(() => ({ data: [] }))
-    ]).then(([leadsRes, outreachRes, campaignsRes]) => {
-      const leads = leadsRes.data?.data || leadsRes.data || [];
-      const outreach = outreachRes.data?.data || outreachRes.data || [];
-      const campaigns = campaignsRes.data?.data || campaignsRes.data || [];
-      
-      const leadsCount = Array.isArray(leads) ? leads.filter((l: any) => l.status === 'researched').length : 0;
-      const repliesCount = Array.isArray(outreach) ? outreach.filter((o: any) => o.status === 'draft' || o.status === 'replied').length : 0;
-      const activeCount = Array.isArray(campaigns) ? campaigns.filter((c: any) => c.status === 'active').length : 0;
-      
-      setStats({ leads: leadsCount, replies: repliesCount });
-      setActiveCampaigns(activeCount);
-    }).catch(console.error)
-  }, [])
+  const user = agency ? { name: agency.agencyName || 'Phantom Agency', email: agency.email || 'hello@phantom.site' } : null
+  
+  const stats = {
+    leads: Array.isArray(leads) ? leads.filter((l: any) => l.status === 'researched').length : 0,
+    replies: Array.isArray(outreach) ? outreach.filter((o: any) => o.status === 'draft' || o.status === 'replied').length : 0
+  }
+  
+  const activeCampaigns = Array.isArray(campaigns) ? campaigns.filter((c: any) => c.status === 'active').length : 0;
 
   const closeSidebar = () => setIsMobileMenuOpen(false)
 

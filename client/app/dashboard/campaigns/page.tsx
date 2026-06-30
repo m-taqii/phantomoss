@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react'
 import { Plus, Search, Layers, Loader2 } from 'lucide-react'
-import axios from 'axios'
+import { useMemo } from 'react'
+import { useDashboardStore } from '@/store/useDashboardStore'
 
 import { CampaignCard } from '@/components/dashboard/campaign-card'
 import { CreateCampaignModal } from '@/components/dashboard/create-campaign-modal'
@@ -12,65 +13,46 @@ export default function CampaignsPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [filter, setFilter] = useState<CampaignStatus | "all">("all")
   const [search, setSearch] = useState("")
-  const [campaigns, setCampaigns] = useState<Campaign[]>([])
-  const [loading, setLoading] = useState(true)
+  const rawCampaigns = useDashboardStore(state => state.campaigns)
+  const fetchCampaigns = useDashboardStore(state => state.fetchCampaigns)
+  const loading = useDashboardStore(state => state.isFetchingCampaigns)
 
-  const fetchCampaigns = async () => {
-    try {
-      setLoading(true)
-      const res = await axios.get(`${process.env.NEXT_PUBLIC_BASE_URL}/api/campaigns`, {
-        withCredentials: true
-      });
-      const fetched = res.data?.data || res.data;
-      if (Array.isArray(fetched) && fetched.length > 0) {
-        const mapped = fetched.map((c: any) => ({
-          id: c._id,
-          name: c.name,
-          status: c.status,
-          channel: c.channel,
-          target: {
-            industry: c.target?.industry || "",
-            location: typeof c.target?.location === "object"
-              ? [c.target?.location?.city, c.target?.location?.state, c.target?.location?.country].filter(Boolean).join(", ")
-              : c.target?.location || "",
-            keywords: c.target?.keywords || [],
-            companySize: c.target?.companySize
-          },
-          stats: {
-            leadsFound: c.stats?.leadsFound || 0,
-            leadsResearched: c.stats?.leadsResearched || 0,
-            emailsSent: c.stats?.emailsSent || 0,
-            emailsOpened: c.stats?.emailsOpened || 0,
-            replies: c.stats?.replies || 0,
-            callsBooked: c.stats?.callsBooked || 0,
-          },
-          schedule: {
-            dailyLimit: c.schedule?.dailyLimit || 30,
-            warmupMode: c.schedule?.warmupMode || false,
-            sendingHours: {
-              start: c.schedule?.sendingHours?.start || 9,
-              end: c.schedule?.sendingHours?.end || 18
-            },
-            followUpDays: c.schedule?.followUpDays || [3, 7]
-          },
-          lastRunAt: c.lastRunAt ? new Date(c.lastRunAt).toLocaleDateString() : undefined,
-          createdAt: new Date(c.createdAt).toLocaleDateString()
-        }));
-        setCampaigns(mapped);
-      } else {
-        setCampaigns([]);
-      }
-    } catch (err) {
-      console.error("Failed to fetch campaigns:", err);
-      setCampaigns([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCampaigns();
-  }, []);
+  const campaigns = useMemo(() => {
+    if (!Array.isArray(rawCampaigns)) return [];
+    return rawCampaigns.map((c: any) => ({
+      id: c._id,
+      name: c.name,
+      status: c.status,
+      channel: c.channel,
+      target: {
+        industry: c.target?.industry || "",
+        location: typeof c.target?.location === "object"
+          ? [c.target?.location?.city, c.target?.location?.state, c.target?.location?.country].filter(Boolean).join(", ")
+          : c.target?.location || "",
+        keywords: c.target?.keywords || [],
+        companySize: c.target?.companySize
+      },
+      stats: {
+        leadsFound: c.stats?.leadsFound || 0,
+        leadsResearched: c.stats?.leadsResearched || 0,
+        emailsSent: c.stats?.emailsSent || 0,
+        emailsOpened: c.stats?.emailsOpened || 0,
+        replies: c.stats?.replies || 0,
+        callsBooked: c.stats?.callsBooked || 0,
+      },
+      schedule: {
+        dailyLimit: c.schedule?.dailyLimit || 30,
+        warmupMode: c.schedule?.warmupMode || false,
+        sendingHours: {
+          start: c.schedule?.sendingHours?.start || 9,
+          end: c.schedule?.sendingHours?.end || 18
+        },
+        followUpDays: c.schedule?.followUpDays || [3, 7]
+      },
+      lastRunAt: c.lastRunAt ? new Date(c.lastRunAt).toLocaleDateString() : undefined,
+      createdAt: new Date(c.createdAt).toLocaleDateString()
+    }));
+  }, [rawCampaigns]);
 
   const filtered = campaigns.filter(c => {
     if (filter !== "all" && c.status !== filter) return false
