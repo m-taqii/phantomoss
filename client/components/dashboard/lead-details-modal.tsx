@@ -207,13 +207,15 @@ export const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({
                     Key Contact
                   </h4>
                   <div className="space-y-3 text-sm">
-                    {lead.contact?.name ? (
+                    {lead.contact?.name || lead.contact?.email ? (
                       <>
-                        <div className="font-semibold text-foreground">{lead.contact.name}</div>
-                        {lead.contact.title && (
+                        {lead.contact?.name && (
+                          <div className="font-semibold text-foreground">{lead.contact.name}</div>
+                        )}
+                        {lead.contact?.title && (
                           <div className="text-xs text-muted-foreground -mt-2 font-medium">{lead.contact.title}</div>
                         )}
-                        {lead.contact.email && (
+                        {lead.contact?.email && (
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
                               <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
