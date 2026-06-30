@@ -30,12 +30,62 @@ const Page = () => {
   const [showCreate, setShowCreate] = useState(false);
   const campaigns = useDashboardStore(state => state.campaigns) || [];
 
+  const [agentStatus, setAgentStatus] = useState<any>({
+    hunter: { active: 0, waiting: 0, delayed: 0 },
+    researcher: { active: 0, waiting: 0, delayed: 0 },
+    outreach: { active: 0, waiting: 0, delayed: 0 },
+    reply: { active: 0, waiting: 0, delayed: 0 },
+  });
+
+  useEffect(() => {
+    const sse = new EventSource(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:8080'}/api/agency/agent-status`, {
+      withCredentials: true
+    });
+
+    sse.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        setAgentStatus(data);
+      } catch (err) {
+        console.error("Failed to parse SSE data", err);
+      }
+    };
+
+    return () => {
+      sse.close();
+    };
+  }, []);
+
   const totalLeads = campaigns.reduce((acc, c) => acc + (c.stats?.leadsFound || 0), 0);
   const totalEmails = campaigns.reduce((acc, c) => acc + (c.stats?.emailsSent || 0), 0);
   const totalReplies = campaigns.reduce((acc, c) => acc + (c.stats?.replies || 0), 0);
   const totalCalls = campaigns.reduce((acc, c) => acc + (c.stats?.callsBooked || 0), 0);
   
   const replyRate = totalEmails > 0 ? ((totalReplies / totalEmails) * 100).toFixed(1) + '%' : '0%';
+
+  const renderAgentStatus = (name: string, data: any, defaultText: string) => {
+    const isWorking = data?.active > 0 || data?.waiting > 0;
+    const isWaiting = data?.waiting > 0;
+    
+    let description = defaultText;
+    if (isWorking) {
+        if (data.active > 0) description = `Processing ${data.active} job(s)...`;
+        else if (data.waiting > 0) description = `${data.waiting} in queue`;
+    }
+
+    return (
+      <div className="flex items-center justify-between pb-4 border-b border-border last:border-0 last:pb-0">
+        <div className="flex items-center gap-3 flex-1 min-w-0 mr-4">
+          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isWorking ? 'bg-emerald-500 animate-pulse' : 'bg-gray-500'}`}></span>
+          <span className="font-semibold text-sm w-16 sm:w-24 shrink-0">{name}</span>
+          <span className={`text-xs flex-1 truncate ${isWorking ? 'text-emerald-500/80 font-medium' : 'text-muted-foreground'}`}>{description}</span>
+        </div>
+        <span className={`px-3 py-1 rounded-full text-[11px] font-bold border shrink-0 ${isWorking ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-gray-500/10 text-muted-foreground border-gray-500/20'}`}>
+          {isWorking ? 'active' : 'idle'}
+        </span>
+      </div>
+    );
+  };
 
   return (
     <div className="flex flex-col gap-5 text-foreground">
@@ -73,50 +123,10 @@ const Page = () => {
           </div>
           
           <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between pb-4 border-b border-border">
-              <div className="flex items-center gap-3 flex-1 min-w-0 mr-4">
-                <span className="w-1.5 h-1.5 rounded-full bg-gray-500 shrink-0"></span>
-                <span className="font-semibold text-sm w-16 sm:w-24 shrink-0">Hunter</span>
-                <span className="text-xs text-muted-foreground flex-1 truncate">Idle / Awaiting instructions</span>
-              </div>
-              <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-gray-500/10 text-muted-foreground border border-gray-500/20 shrink-0">idle</span>
-            </div>
-            
-            <div className="flex items-center justify-between pb-4 border-b border-border">
-              <div className="flex items-center gap-3 flex-1 min-w-0 mr-4">
-                <span className="w-1.5 h-1.5 rounded-full bg-gray-500 shrink-0"></span>
-                <span className="font-semibold text-sm w-16 sm:w-24 shrink-0">Researcher</span>
-                <span className="text-xs text-muted-foreground flex-1 truncate">0 leads in queue</span>
-              </div>
-              <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-gray-500/10 text-muted-foreground border border-gray-500/20 shrink-0">idle</span>
-            </div>
-            
-            <div className="flex items-center justify-between pb-4 border-b border-border">
-              <div className="flex items-center gap-3 flex-1 min-w-0 mr-4">
-                <span className="w-1.5 h-1.5 rounded-full bg-gray-500 shrink-0"></span>
-                <span className="font-semibold text-sm w-16 sm:w-24 shrink-0">Outreach</span>
-                <span className="text-xs text-muted-foreground flex-1 truncate">No active campaigns</span>
-              </div>
-              <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-gray-500/10 text-muted-foreground border border-gray-500/20 shrink-0">idle</span>
-            </div>
-
-            <div className="flex items-center justify-between pb-4 border-b border-border">
-              <div className="flex items-center gap-3 flex-1 min-w-0 mr-4">
-                <span className="w-1.5 h-1.5 rounded-full bg-gray-500 shrink-0"></span>
-                <span className="font-semibold text-sm w-16 sm:w-24 shrink-0">Reply Handler</span>
-                <span className="text-xs text-muted-foreground flex-1 truncate">0 replies need review</span>
-              </div>
-              <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-gray-500/10 text-muted-foreground border border-gray-500/20 shrink-0">idle</span>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3 flex-1 min-w-0 mr-4">
-                <span className="w-1.5 h-1.5 rounded-full bg-gray-500 shrink-0"></span>
-                <span className="font-semibold text-sm w-16 sm:w-24 shrink-0">Proposal</span>
-                <span className="text-xs text-muted-foreground flex-1 truncate">No pending tasks</span>
-              </div>
-              <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-gray-500/10 text-muted-foreground border border-gray-500/20 shrink-0">idle</span>
-            </div>
+            {renderAgentStatus("Hunter", agentStatus.hunter, "Idle / Awaiting instructions")}
+            {renderAgentStatus("Researcher", agentStatus.researcher, "0 leads in queue")}
+            {renderAgentStatus("Outreach", agentStatus.outreach, "No active campaigns")}
+            {renderAgentStatus("Reply Handler", agentStatus.reply, "0 replies need review")}
           </div>
         </div>
 

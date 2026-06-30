@@ -91,29 +91,10 @@ export function startResearcherWorker(): Worker {
           console.log(`[Researcher Worker] Lead ${leadId} researched. Score: ${score}`);
         }
 
-        // 4. After every research job, check if the inventory needs a Hunter top-up.
-        //    We check once per Researcher job completion (debounced by BullMQ concurrency).
-        const dailyLimit = campaign.schedule?.dailyLimit ?? 30;
-        const bufferTarget = dailyLimit * 3;
-        const currentInventory = await Lead.countDocuments({
-          campaignId,
-          status: "researched",
-        });
-
-        if (currentInventory < dailyLimit) {
-          // Below the TRIGGER threshold — wake up the Hunter
-          const huntQueue = getQueue("hunt");
-          const waitingHuntJobs = await huntQueue.getWaitingCount();
-          if (waitingHuntJobs === 0) {
-            await huntQueue.add("hunt", { campaignId });
-            // Wake the hunter worker
-            const { startHunterWorker } = await import("./hunter.worker");
-            startHunterWorker();
-            console.log(`[Researcher Worker] Inventory low (${currentInventory}/${bufferTarget}). Triggered Hunter.`);
-          }
-        } else if (currentInventory < bufferTarget) {
-          console.log(`[Researcher Worker] Inventory at ${currentInventory}/${bufferTarget} — Hunter already scheduled or buffer filling.`);
-        }
+        // 4. After every research job, evaluate stock using the centralized manager.
+        // This correctly accounts for "discovered" leads in the pipeline and prevents infinite Hunter loops!
+        const { evaluateLeadStock } = await import("./stock");
+        await evaluateLeadStock(campaignId);
 
       } catch (err) {
         console.error(`[Researcher Worker Error]`, err);
@@ -128,10 +109,23 @@ export function startResearcherWorker(): Worker {
       console.error(`[Researcher Worker Error | ${queueName}]`, err);
     });
 
+    let drainTimeout: NodeJS.Timeout | null = null;
+
+    worker.on("active", () => {
+      if (drainTimeout) {
+        clearTimeout(drainTimeout);
+        drainTimeout = null;
+      }
+    });
+
     worker.on("drained", async () => {
-      console.log(`[Researcher Worker | ${queueName}] Queue drained. Shutting down.`);
-      await worker.close();
-      workersCache.delete(queueName);
+      console.log(`[Researcher Worker | ${queueName}] Queue drained. Waiting 35s for stalled jobs before shutdown...`);
+      if (drainTimeout) clearTimeout(drainTimeout);
+      drainTimeout = setTimeout(async () => {
+        console.log(`[Researcher Worker | ${queueName}] Shutdown timeout reached. Shutting down.`);
+        await worker.close();
+        workersCache.delete(queueName);
+      }, 35000);
     });
 
     workersCache.set(queueName, worker);

@@ -69,7 +69,11 @@ export function startStrategistWorker(): Worker {
                 await campaign.save();
                 console.log(`[Strategist Worker] Strategy saved successfully for campaign ${campaignId}.`);
 
-                // Enqueue the scheduler job to actually start the campaign (Hunter, etc.)
+                // 1. Immediately evaluate and replenish lead stock if needed
+                const { evaluateLeadStock } = await import("./stock");
+                await evaluateLeadStock(campaignId);
+
+                // 2. Enqueue the scheduler job to actually start the campaign (Outreacher, etc.)
                 const schedulerQ = getQueue("scheduler");
                 const now = new Date();
                 const tz = agency?.settings?.timezone || "UTC";
@@ -119,10 +123,23 @@ export function startStrategistWorker(): Worker {
             console.error(`[Strategist Worker Error | ${queueName}]`, err);
         });
 
+        let drainTimeout: NodeJS.Timeout | null = null;
+
+        worker.on("active", () => {
+            if (drainTimeout) {
+                clearTimeout(drainTimeout);
+                drainTimeout = null;
+            }
+        });
+
         worker.on("drained", async () => {
-            console.log(`[Strategist Worker | ${queueName}] Queue drained. Shutting down worker to save resources.`);
-            await worker.close();
-            workersCache.delete(queueName);
+            console.log(`[Strategist Worker | ${queueName}] Queue drained. Waiting 35s for stalled jobs before shutdown...`);
+            if (drainTimeout) clearTimeout(drainTimeout);
+            drainTimeout = setTimeout(async () => {
+                console.log(`[Strategist Worker | ${queueName}] Shutdown timeout reached. Shutting down worker to save resources.`);
+                await worker.close();
+                workersCache.delete(queueName);
+            }, 35000);
         });
         
         workersCache.set(queueName, worker);

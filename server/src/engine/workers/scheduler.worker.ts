@@ -31,15 +31,7 @@ export function startSchedulerWorker(): Worker {
         return;
     }
 
-    // 2. Trigger the Hunter for this campaign
-    const huntQueue = getQueue("hunt");
-    await huntQueue.add("hunt", { campaignId });
-    console.log(`[Scheduler] Enqueued hunt job for Campaign ${campaignId} to queue ${huntQueue.name}`);
-
-    // 3. Wake up the isolated worker
-    startHunterWorker();
-
-    // 4. Autonomously dispatch Outreacher
+    // 2. Autonomously dispatch Outreacher
     // Determine daily limit, considering warmup mode
     let effectiveLimit = campaign.schedule?.dailyLimit || 30;
     if (campaign.schedule?.warmupMode) {
@@ -98,6 +90,10 @@ export function startSchedulerWorker(): Worker {
             $set: { lastLearnerTriggerAt: totalSent },
         });
     }
+
+    // 5. Evaluate and replenish lead stock for tomorrow
+    const { evaluateLeadStock } = await import("./stock");
+    await evaluateLeadStock(campaignId);
 
     // 6. Schedule the next day's run recursively using the Agency's Timezone
     const agency = await Agency.findOne();

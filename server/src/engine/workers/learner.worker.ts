@@ -72,10 +72,23 @@ export function startLearnerWorker(): Worker {
             console.error(`[Learner Worker Error | ${queueName}]`, err);
         });
 
+        let drainTimeout: NodeJS.Timeout | null = null;
+
+        worker.on("active", () => {
+            if (drainTimeout) {
+                clearTimeout(drainTimeout);
+                drainTimeout = null;
+            }
+        });
+
         worker.on("drained", async () => {
-            console.log(`[Learner Worker | ${queueName}] Queue drained. Shutting down.`);
-            await worker.close();
-            workersCache.delete(queueName);
+            console.log(`[Learner Worker | ${queueName}] Queue drained. Waiting 35s for stalled jobs before shutdown...`);
+            if (drainTimeout) clearTimeout(drainTimeout);
+            drainTimeout = setTimeout(async () => {
+                console.log(`[Learner Worker | ${queueName}] Shutdown timeout reached. Shutting down.`);
+                await worker.close();
+                workersCache.delete(queueName);
+            }, 35000);
         });
 
         workersCache.set(queueName, worker);
