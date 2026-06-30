@@ -21,7 +21,7 @@ export async function searchSerper(query: string, page: number = 1): Promise<Ser
       },
       body: JSON.stringify({
         q: query,
-        num: 100,
+        num: 10,
         page: page,
       }),
     });
