@@ -43,6 +43,11 @@ async function processInboundReplies() {
         logger: false,
     });
 
+    // Prevent unhandled background socket timeouts/errors from crashing the entire Node process
+    client.on("error", (err) => {
+        console.error("[InboxWorker] ImapFlow connection error (background):", err);
+    });
+
     try {
         await client.connect();
         const lock = await client.getMailboxLock("INBOX");
@@ -127,7 +132,11 @@ async function processInboundReplies() {
     } catch (err) {
         console.error(`[InboxWorker] IMAP Error:`, err);
     } finally {
-        await client.logout();
+        try {
+            await client.logout();
+        } catch (e) {
+            // Ignore logout errors if connection is already closed
+        }
     }
 }
 
