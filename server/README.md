@@ -88,7 +88,7 @@ flowchart TD
 
 ### Hunter
 - **Purpose:** Performs automated web searches, scrapes candidate data, and scores leads.
-- **Key Tasks:** Query DuckDuckGo/Jina, extract contact info, compute relevance score.
+- **Key Tasks:** Query Serper API, extract contact info, compute relevance score.
 - **Integration:** Enqueued via `hunter` job type. Worker claims the job, invokes the Hunter graph, stores scored leads in the `Lead` collection, and emits events for the Researcher.
 
 ### Researcher
@@ -121,14 +121,17 @@ pnpm install
 Create a `.env` file based on `.env.example`:
 ```env
 PORT=8080
-MONGODB_URI=mongodb://localhost:27017/phantom
+MONGODB_URI=mongodb://localhost:27017/phantomdb
+REDIS_URL=redis://localhost:6379
 JWT_SECRET=your_jwt_secret_key
 ENCRYPTION_KEY=your_32_byte_hex_string_here
-# API keys for AI Router
-OPENAI_API_KEY=
-GEMINI_API_KEY=
-GROQ_API_KEY=
-CEREBRAS_API_KEY=
+
+# AI Provider API Keys
+AI_API_KEY=your_api_key_here
+
+# Data APIs
+SERPER_API_KEY=your_serper_api_key_here
+HUNTER_API_KEY=your_hunterio_api_key_here
 ```
 
 ### Running
