@@ -57,6 +57,11 @@ export async function replyNode(state: typeof ReplyStateAnnotation.State): Promi
 
     // Update Lead status based on intent
     const { Lead } = await import("../../../../models/lead.model");
+    const { Campaign } = await import("../../../../models/campaign.model");
+    
+    // Increment total replies for the campaign
+    await Campaign.findByIdAndUpdate(state.campaignId, { $inc: { "stats.replies": 1 } });
+    
     if (data.intent === "not_interested") {
       await Lead.findByIdAndUpdate(state.leadId, { $set: { status: "not_interested" } });
       console.log(`[ReplyAgent] Lead ${state.leadId} marked as not_interested`);

@@ -151,6 +151,10 @@ export async function saveNode(state: HunterState): Promise<Partial<HunterState>
       };
     }
 
+    if (saved > 0) {
+      updateQuery.$inc = { "stats.leadsFound": saved };
+    }
+
     await Campaign.findByIdAndUpdate(state.campaignId, updateQuery);
 
     // 5. Immediately enqueue Research jobs for newly saved leads

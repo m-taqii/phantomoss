@@ -161,37 +161,6 @@ const Page = () => {
           </div>
         </div>
 
-        {/* Today's Summary */}
-        <div className="bg-card border border-border rounded-xl p-6">
-          <h2 className="text-lg font-semibold mb-6">Today&apos;s summary</h2>
-          
-          <div className="flex flex-col gap-4">
-            <div className="flex justify-between items-center pb-4 border-b border-border">
-              <span className="text-sm text-muted-foreground">Emails sent</span>
-              <span className="text-sm font-semibold text-foreground">0 / 0</span>
-            </div>
-            <div className="flex justify-between items-center pb-4 border-b border-border">
-              <span className="text-sm text-muted-foreground">New leads</span>
-              <span className="text-sm font-semibold text-foreground">0</span>
-            </div>
-            <div className="flex justify-between items-center pb-4 border-b border-border">
-              <span className="text-sm text-muted-foreground">Replies received</span>
-              <span className="text-sm font-semibold text-foreground">0</span>
-            </div>
-            <div className="flex justify-between items-center pb-4 border-b border-border">
-              <span className="text-sm text-muted-foreground">Pending review</span>
-              <span className="text-sm font-semibold text-foreground">0</span>
-            </div>
-            <div className="flex justify-between items-center pb-4 border-b border-border">
-              <span className="text-sm text-muted-foreground">Follow-ups due</span>
-              <span className="text-sm font-semibold text-foreground">0</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Domain health</span>
-              <span className="text-sm font-semibold text-emerald-500">good</span>
-            </div>
-          </div>
-        </div>
       </div>
 
       <CreateCampaignModal isOpen={showCreate} onClose={() => setShowCreate(false)} />

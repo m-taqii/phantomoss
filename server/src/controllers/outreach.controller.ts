@@ -48,6 +48,12 @@ export async function approveOutreachDraft(req: AuthenticatedRequest, res: Respo
         // Update lead status
         await Lead.findByIdAndUpdate(lead._id, { status: "contacted", lastContactedAt: new Date() });
 
+        // Update campaign stats
+        if (outreach.campaignId) {
+            const { Campaign } = await import("../models/campaign.model");
+            await Campaign.findByIdAndUpdate(outreach.campaignId, { $inc: { "stats.emailsSent": 1 } });
+        }
+
         return sendSuccess(res, outreach, "Draft approved and email sent successfully");
     } catch (error) {
         return sendError(res, error instanceof Error ? error.message : "Failed to approve draft");
