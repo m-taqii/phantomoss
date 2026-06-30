@@ -116,7 +116,7 @@ export default function SettingsPage() {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center justify-center gap-2 bg-accent hover:bg-accent/80 disabled:bg-accent/50 text-black font-semibold px-4 py-2.5 rounded-lg transition-colors text-sm w-full sm:w-auto"
+          className="flex items-center justify-center gap-2 bg-accent hover:bg-accent/80 disabled:bg-accent/50 text-black font-semibold px-4 py-2.5 rounded-lg transition-colors text-sm w-full sm:w-auto cursor-pointer"
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           {saving ? 'Saving...' : 'Save Changes'}

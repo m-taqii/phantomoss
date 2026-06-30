@@ -2,9 +2,9 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  X, Globe, MapPin, Mail, Phone, Calendar, Users2, 
-  ExternalLink, Trash2, Check, CheckCircle2, AlertTriangle, 
+import {
+  X, Globe, MapPin, Mail, Phone, Calendar, Users2,
+  ExternalLink, Trash2, Check, CheckCircle2, AlertTriangle,
   Building2, Sparkles, Award
 } from 'lucide-react';
 import { statusStyles, LeadStatus } from '@/lib/data/leads';
@@ -137,9 +137,9 @@ export const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({
                     {lead.company?.website && (
                       <div className="flex items-center gap-2">
                         <Globe className="w-4 h-4 text-muted-foreground shrink-0" />
-                        <a 
-                          href={lead.company.website.startsWith('http') ? lead.company.website : `https://${lead.company.website}`} 
-                          target="_blank" 
+                        <a
+                          href={lead.company.website.startsWith('http') ? lead.company.website : `https://${lead.company.website}`}
+                          target="_blank"
                           rel="noreferrer"
                           className="text-accent hover:underline flex items-center gap-1 truncate"
                         >
@@ -222,7 +222,7 @@ export const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({
                             {lead.contact.emailConfidence !== undefined && (
                               <div className="flex items-center gap-2 mt-1">
                                 <div className="flex-1 bg-secondary h-1.5 rounded-full overflow-hidden max-w-[100px]">
-                                  <div 
+                                  <div
                                     className={`h-full rounded-full ${lead.contact.emailConfidence >= 80 ? 'bg-emerald-500' : lead.contact.emailConfidence >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
                                     style={{ width: `${lead.contact.emailConfidence}%` }}
                                   />

@@ -96,7 +96,7 @@ export default function CampaignsPage() {
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center justify-center gap-2 bg-accent hover:bg-accent/80 text-black font-semibold px-4 py-2.5 rounded-lg transition-colors text-sm w-full sm:w-auto"
+          className="flex items-center justify-center gap-2 bg-accent hover:bg-accent/80 text-black font-semibold px-4 py-2.5 rounded-lg transition-colors text-sm w-full sm:w-auto cursor-pointer"
         >
           <Plus className="w-4 h-4" /> New Campaign
         </button>
@@ -150,7 +150,7 @@ export default function CampaignsPage() {
             </p>
             <button
               onClick={() => setShowCreate(true)}
-              className="flex items-center gap-2 bg-accent hover:bg-accent/80 text-black font-semibold px-4 py-2.5 rounded-lg transition-colors text-sm"
+              className="flex items-center gap-2 bg-accent hover:bg-accent/80 text-black font-semibold px-4 py-2.5 rounded-lg transition-colors text-sm cursor-pointer"
             >
               <Plus className="w-4 h-4" /> Create Campaign
             </button>

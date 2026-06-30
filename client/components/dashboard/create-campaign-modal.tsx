@@ -206,7 +206,7 @@ export function CreateCampaignModal({ isOpen, onClose, onSuccess, campaignToEdit
             <div className="mb-4">
               <label className="block text-xs font-medium text-muted-foreground mb-2">Outreach Channel</label>
               <div className="flex flex-wrap gap-2">
-                {(["email", "linkedin", "whatsapp", "instagram"] as OutreachChannel[]).map(ch => (
+                {(["email"] as OutreachChannel[]).map(ch => (
                   <button 
                     key={ch} 
                     onClick={() => setActiveChannel(ch)}

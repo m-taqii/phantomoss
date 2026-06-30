@@ -22,6 +22,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const pathname = usePathname()
   const [user, setUser] = useState<{name: string, email: string} | null>(null)
+  const [activeCampaigns, setActiveCampaigns] = useState(0)
+  const [currentDate, setCurrentDate] = useState('Loading date...')
 
   const [stats, setStats] = useState({ leads: 0, replies: 0 })
 
@@ -30,26 +32,40 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     axios.get(`${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/me`, { withCredentials: true })
       .then(res => {
         if (res.data?.data?.agency) {
+          const agency = res.data.data.agency;
           setUser({ 
-            name: res.data.data.agency.agencyName || 'Phantom Agency', 
-            email: res.data.data.agency.email || 'hello@phantom.site' 
+            name: agency.agencyName || 'Phantom Agency', 
+            email: agency.email || 'hello@phantom.site' 
           })
+          
+          const tz = agency.settings?.timezone || 'UTC';
+          try {
+            const dateOptions: Intl.DateTimeFormatOptions = { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true, timeZone: tz };
+            setCurrentDate(new Intl.DateTimeFormat('en-US', dateOptions).format(new Date()));
+          } catch (e) {
+            const dateOptions: Intl.DateTimeFormatOptions = { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true };
+            setCurrentDate(new Intl.DateTimeFormat('en-US', dateOptions).format(new Date()));
+          }
         }
       })
       .catch(console.error)
 
-    // Fetch Stats for Badges
+    // Fetch Stats for Badges & Campaigns
     Promise.all([
       axios.get(`${process.env.NEXT_PUBLIC_BASE_URL}/api/leads`, { withCredentials: true }).catch(() => ({ data: [] })),
-      axios.get(`${process.env.NEXT_PUBLIC_BASE_URL}/api/outreach`, { withCredentials: true }).catch(() => ({ data: [] }))
-    ]).then(([leadsRes, outreachRes]) => {
+      axios.get(`${process.env.NEXT_PUBLIC_BASE_URL}/api/outreach`, { withCredentials: true }).catch(() => ({ data: [] })),
+      axios.get(`${process.env.NEXT_PUBLIC_BASE_URL}/api/campaigns`, { withCredentials: true }).catch(() => ({ data: [] }))
+    ]).then(([leadsRes, outreachRes, campaignsRes]) => {
       const leads = leadsRes.data?.data || leadsRes.data || [];
       const outreach = outreachRes.data?.data || outreachRes.data || [];
+      const campaigns = campaignsRes.data?.data || campaignsRes.data || [];
       
-      const leadsCount = Array.isArray(leads) ? leads.filter(l => l.status === 'researched').length : 0;
+      const leadsCount = Array.isArray(leads) ? leads.filter((l: any) => l.status === 'researched').length : 0;
       const repliesCount = Array.isArray(outreach) ? outreach.filter((o: any) => o.status === 'draft' || o.status === 'replied').length : 0;
+      const activeCount = Array.isArray(campaigns) ? campaigns.filter((c: any) => c.status === 'active').length : 0;
       
       setStats({ leads: leadsCount, replies: repliesCount });
+      setActiveCampaigns(activeCount);
     }).catch(console.error)
   }, [])
 
@@ -171,7 +187,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             </button>
             <div className="min-w-0">
               <h1 className="text-base md:text-xl font-semibold text-foreground truncate">Command Center</h1>
-              <p className="text-muted-foreground text-xs hidden sm:block">Tuesday, May 5 — 3 campaigns active</p>
+              <p className="text-muted-foreground text-xs hidden sm:block">{currentDate} — {activeCampaigns} campaigns active</p>
             </div>
           </div>
           <div className="shrink-0">
