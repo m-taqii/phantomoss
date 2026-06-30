@@ -129,6 +129,50 @@ export async function updateCampaign(req: AuthenticatedRequest, res: Response, n
     );
 
     if (!campaign) return sendNotFound(res, "Campaign");
+
+    // If schedule or startDate was updated, recalculate the delay and update the job in the queue
+    if (schedule !== undefined || startDate !== undefined) {
+      const { getQueue } = await import("../engine/queue");
+      const schedulerQ = getQueue("scheduler");
+      const jobId = `scheduler-${campaign._id.toString()}`;
+      
+      const existingJob = await schedulerQ.getJob(jobId);
+      if (existingJob) {
+        await existingJob.remove();
+        console.log(`[Campaign Controller] Removed old pending job for campaign ${campaign._id}`);
+      }
+
+      const { Agency } = await import("../models/agency.model");
+      const agency = await Agency.findOne();
+      const tz = agency?.settings?.timezone || "UTC";
+      const { toZonedTime, fromZonedTime } = await import("date-fns-tz");
+      
+      const now = new Date();
+      const nowInTz = toZonedTime(now, tz);
+      const startInTz = toZonedTime(campaign.schedule.startDate || now, tz);
+      
+      if (campaign.schedule?.schedule !== undefined) {
+          startInTz.setHours(campaign.schedule.schedule, 0, 0, 0);
+      }
+      
+      if (startInTz.getTime() <= nowInTz.getTime()) {
+          startInTz.setDate(startInTz.getDate() + 1);
+      }
+      
+      const nextRunUTC = fromZonedTime(startInTz, tz);
+      const delay = Math.max(0, nextRunUTC.getTime() - now.getTime());
+      
+      await schedulerQ.add(
+          "trigger-campaign",
+          { campaignId: campaign._id.toString() },
+          { delay, jobId }
+      );
+      
+      const { startSchedulerWorker } = await import("../engine/workers/scheduler.worker");
+      startSchedulerWorker();
+      console.log(`[Campaign Controller] Rescheduled campaign ${campaign._id} with new delay ${delay}ms`);
+    }
+
     return sendSuccess(res, campaign, "Campaign updated");
   } catch (err) {
     next(err);

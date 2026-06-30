@@ -71,10 +71,25 @@ export function startStrategistWorker(): Worker {
 
                 // Enqueue the scheduler job to actually start the campaign (Hunter, etc.)
                 const schedulerQ = getQueue("scheduler");
-                const now = Date.now();
-                const startMs = campaign.schedule.startDate ? campaign.schedule.startDate.getTime() : now;
-                let delay = startMs - now;
-                if (delay < 0) delay = 0; // If start date is in the past, run immediately
+                const now = new Date();
+                const tz = agency?.settings?.timezone || "UTC";
+                const { toZonedTime, fromZonedTime } = await import("date-fns-tz");
+                
+                const nowInTz = toZonedTime(now, tz);
+                const startInTz = toZonedTime(campaign.schedule.startDate || now, tz);
+                
+                // Align to the configured hour
+                if (campaign.schedule?.schedule !== undefined) {
+                    startInTz.setHours(campaign.schedule.schedule, 0, 0, 0);
+                }
+                
+                // If that specific hour has already passed for today, run tomorrow instead
+                if (startInTz.getTime() <= nowInTz.getTime()) {
+                    startInTz.setDate(startInTz.getDate() + 1);
+                }
+                
+                const nextRunUTC = fromZonedTime(startInTz, tz);
+                const delay = Math.max(0, nextRunUTC.getTime() - now.getTime());
 
                 await schedulerQ.add(
                     "trigger-campaign",
