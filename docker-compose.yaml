@@ -20,6 +20,39 @@ services:
     environment:
       - MONGO_INITDB_DATABASE=phantomdb
 
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: phantom_server
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mongodb
+      - redis
+    env_file:
+      - ./server/.env
+    restart: unless-stopped
+    environment:
+      # Overrides to use internal Docker network hostnames
+      - MONGODB_URI=mongodb://mongodb:27017/phantomdb
+      - REDIS_URL=redis://redis:6379
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: phantom_client
+    ports:
+      - "3000:3000"
+    depends_on:
+      - server
+    env_file:
+      - ./client/.env
+    restart: unless-stopped
+    environment:
+      - NEXT_PUBLIC_BASE_URL=http://localhost:8080
+
 volumes:
   redis_data:
   mongo_data:

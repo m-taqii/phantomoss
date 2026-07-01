@@ -138,17 +138,7 @@ The agent pipeline runs on BullMQ backed by Redis. No polling loops. No cron hac
 - [pnpm](https://pnpm.io/) (`npm i -g pnpm`)
 - [Docker](https://www.docker.com/) and Docker Compose
 
-### 1. Spin Up Infrastructure
-
-Phantom needs MongoDB for state and Redis for its job queues. The included Docker Compose file handles both:
-
-```bash
-docker-compose up -d
-```
-
-This starts MongoDB on port `27017` and Redis on port `6379`.
-
-### 2. Configure Environment
+### 1. Configure Environment
 
 Create a `.env` file in the `server/` directory:
 
@@ -158,9 +148,6 @@ MONGODB_URI=mongodb://localhost:27017/phantomdb
 REDIS_URL=redis://localhost:6379
 JWT_SECRET=<your-jwt-secret>
 CLIENT_URL=http://localhost:3000
-
-# 64-character (32-byte) hex string used to encrypt/decrypt sensitive credentials stored in DB
-ENCRYPTION_KEY=0000000000000000000000000000000000000000000000000000000000000000
 
 # AI Provider (OpenAI-compatible)
 AI_API_KEY=<your-api-key>
@@ -189,25 +176,17 @@ Create a `.env` file in the `client/` directory:
 NEXT_PUBLIC_BASE_URL=http://localhost:8080
 ```
 
-### 3. Ignite the Swarm
+### 2. Ignite the Swarm
 
-Start the backend engine and the frontend dashboard in separate terminals.
+The easiest way to run Phantom is using Docker Compose, which automatically spins up MongoDB, Redis, the Node Backend, and the Next.js Frontend all at once:
 
-**Terminal 1 — Backend Engine:**
 ```bash
-cd server
-pnpm install
-pnpm run dev
-```
-
-**Terminal 2 — Frontend Dashboard:**
-```bash
-cd client
-pnpm install
-pnpm run dev
+docker-compose up -d
 ```
 
 The Phantom dashboard will be live at `http://localhost:3000`.
+
+*(Alternatively, you can run the services manually using `pnpm install` and `pnpm run dev` in both the `server/` and `client/` directories.)*
 
 ---
 
@@ -219,7 +198,6 @@ The Phantom dashboard will be live at `http://localhost:3000`.
 | `MONGODB_URI` | Yes | MongoDB connection string |
 | `REDIS_URL` | Yes | Redis connection string |
 | `JWT_SECRET` | Yes | Secret key for JWT token signing |
-| `ENCRYPTION_KEY` | Yes | 64-character (32-byte) hex string for credential encryption |
 | `CLIENT_URL` | Yes | URL of the frontend client (defaults to http://localhost:3000) |
 | `SMTP_HOST` | Yes | SMTP server hostname for outbound emails |
 | `SMTP_PORT` | No | SMTP server port (defaults to 587) |
