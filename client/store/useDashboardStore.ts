@@ -6,16 +6,20 @@ interface DashboardState {
   campaigns: any[]
   leads: any[]
   outreach: any[]
+  learnings: any[]
+  learningsPagination: { page: number, limit: number, total: number, pages: number } | null
   isFetchingAgency: boolean
   isFetchingCampaigns: boolean
   isFetchingLeads: boolean
   isFetchingOutreach: boolean
+  isFetchingLearnings: boolean
   hasFetchedOnce: boolean
 
   fetchAgency: () => Promise<void>
   fetchCampaigns: () => Promise<void>
   fetchLeads: () => Promise<void>
   fetchOutreach: () => Promise<void>
+  fetchLearnings: (page?: number, limit?: number) => Promise<void>
   fetchAll: () => Promise<void>
 }
 
@@ -24,10 +28,13 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   campaigns: [],
   leads: [],
   outreach: [],
+  learnings: [],
+  learningsPagination: null,
   isFetchingAgency: false,
   isFetchingCampaigns: false,
   isFetchingLeads: false,
   isFetchingOutreach: false,
+  isFetchingLearnings: false,
   hasFetchedOnce: false,
 
   fetchAgency: async () => {
@@ -76,6 +83,21 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       console.error('Failed to fetch outreach:', e)
     } finally {
       set({ isFetchingOutreach: false })
+    }
+  },
+
+  fetchLearnings: async (page = 1, limit = 10) => {
+    set({ isFetchingLearnings: true })
+    try {
+      const res = await axios.get(`${process.env.NEXT_PUBLIC_BASE_URL}/api/learnings?page=${page}&limit=${limit}`, { withCredentials: true })
+      set({ 
+        learnings: res.data?.data?.learnings || [],
+        learningsPagination: res.data?.data?.pagination || null
+      })
+    } catch (e) {
+      console.error('Failed to fetch learnings:', e)
+    } finally {
+      set({ isFetchingLearnings: false })
     }
   },
 
