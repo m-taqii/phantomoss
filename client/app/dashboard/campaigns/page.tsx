@@ -50,7 +50,8 @@ export default function CampaignsPage() {
         followUpDays: c.schedule?.followUpDays || [3, 7]
       },
       lastRunAt: c.lastRunAt ? new Date(c.lastRunAt).toLocaleDateString() : undefined,
-      createdAt: new Date(c.createdAt).toLocaleDateString()
+      createdAt: new Date(c.createdAt).toLocaleDateString(),
+      strategy: c.strategy
     }));
   }, [rawCampaigns]);
 

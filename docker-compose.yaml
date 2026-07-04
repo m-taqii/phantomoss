@@ -50,8 +50,6 @@ services:
     env_file:
       - ./client/.env
     restart: unless-stopped
-    environment:
-      - NEXT_PUBLIC_BASE_URL=http://localhost:8080
 
 volumes:
   redis_data:

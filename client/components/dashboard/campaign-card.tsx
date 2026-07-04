@@ -1,10 +1,11 @@
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react'
-import { MapPin, Tag, MoreHorizontal, Mail, BarChart2, Clock, Calendar, Edit, Trash2, Play, Pause } from 'lucide-react'
+import { MapPin, Tag, MoreHorizontal, Mail, BarChart2, Clock, Calendar, Edit, Trash2, Play, Pause, Target } from 'lucide-react'
 import axios from 'axios'
 import { useToast } from '@/hooks/use-toast'
 import { CreateCampaignModal } from './create-campaign-modal'
+import { StrategyViewer } from './strategy-viewer'
 import { Campaign, statusConfig } from '@/lib/data/campaigns'
 
 const StatusBadge = ({ status }: { status: Campaign['status'] }) => {
@@ -28,6 +29,7 @@ const StatItem = ({ icon: Icon, label, value }: { icon: React.ElementType, label
 export const CampaignCard = ({ campaign, onUpdate }: { campaign: Campaign, onUpdate?: () => void }) => {
   const [showMenu, setShowMenu] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showStrategyModal, setShowStrategyModal] = useState(false);
   const [rawCampaign, setRawCampaign] = useState(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -117,7 +119,12 @@ export const CampaignCard = ({ campaign, onUpdate }: { campaign: Campaign, onUpd
               <MoreHorizontal className="w-4 h-4" />
             </button>
             {showMenu && (
-              <div className="absolute right-0 top-full mt-2 w-36 bg-card border border-border rounded-xl shadow-xl z-50 overflow-hidden">
+              <div className="absolute right-0 top-full mt-2 w-40 bg-card border border-border rounded-xl shadow-xl z-50 overflow-hidden">
+                {campaign.strategy && (
+                  <button onClick={(e) => { e.preventDefault(); setShowStrategyModal(true); setShowMenu(false); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-accent hover:bg-accent/10 transition-colors text-left font-medium">
+                    <Target className="w-4 h-4" /> View Strategy
+                  </button>
+                )}
                 <button onClick={handleEdit} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-foreground/5 transition-colors text-left">
                   <Edit className="w-4 h-4" /> Edit
                 </button>
@@ -185,12 +192,17 @@ export const CampaignCard = ({ campaign, onUpdate }: { campaign: Campaign, onUpd
         </div>
       )}
 
-      {/* Edit Modal */}
       <CreateCampaignModal 
         isOpen={showEditModal} 
         onClose={() => setShowEditModal(false)} 
         onSuccess={onUpdate} 
         campaignToEdit={rawCampaign} 
+      />
+
+      <StrategyViewer 
+        isOpen={showStrategyModal}
+        onClose={() => setShowStrategyModal(false)}
+        strategy={campaign.strategy}
       />
     </div>
   )

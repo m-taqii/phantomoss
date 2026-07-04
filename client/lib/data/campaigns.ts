@@ -28,6 +28,7 @@ export interface Campaign {
   }
   lastRunAt?: string
   createdAt: string
+  strategy?: any
 }
 
 
