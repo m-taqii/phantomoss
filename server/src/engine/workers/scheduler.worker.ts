@@ -45,7 +45,8 @@ export function startSchedulerWorker(): Worker {
 
     const readyLeads = await Lead.find({
         campaignId,
-        status: "researched"
+        status: "researched",
+        "contact.emailConfidence": { $gte: 50 }
     }).limit(effectiveLimit);
 
     if (readyLeads.length > 0) {
