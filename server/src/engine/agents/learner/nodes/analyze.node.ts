@@ -92,7 +92,7 @@ export async function analyzeNode(state: LearnerState): Promise<Partial<LearnerS
 
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
-        const llm = getLLM("smart");
+        const llm = getLLM("fast");
         const response = await llm.invoke([
           { role: "system", content: prompt },
           { role: "user", content: "Analyze the campaign data and generate structured insights now." },

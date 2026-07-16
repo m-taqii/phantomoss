@@ -7,7 +7,7 @@ import { replySystemPrompt } from "../prompts";
 export async function replyNode(state: typeof ReplyStateAnnotation.State): Promise<Partial<typeof ReplyStateAnnotation.State>> {
   console.log(`[ReplyAgent] Classifying inbound email from ${state.contact.email}`);
 
-  const llm = getLLM("smart");
+  const llm = getLLM("flash");
 
   const prompt = ChatPromptTemplate.fromMessages([
     ["system", replySystemPrompt(state)],

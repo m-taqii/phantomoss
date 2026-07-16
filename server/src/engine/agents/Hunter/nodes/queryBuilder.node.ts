@@ -72,7 +72,11 @@ export async function queryBuilderNode(state: HunterState): Promise<Partial<Hunt
     ]);
 
     const raw = typeof response.content === "string" ? response.content : JSON.stringify(response.content);
-    const cleaned = raw.replace(/```json/g, "").replace(/```/g, "").trim();
+    let cleaned = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
+    const match = cleaned.match(/\[[\s\S]*\]/);
+    if (match) {
+      cleaned = match[0];
+    }
 
     let queries: string[] = [];
     try {
