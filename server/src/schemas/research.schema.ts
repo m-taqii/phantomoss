@@ -19,6 +19,7 @@ export const ResearchOutputSchema = z.object({
     linkedin: z.string().nullable().optional(),
     instagram: z.string().nullable().optional(),
     emailSource: z.enum(["verified", "corrected", "guessed"]).optional(),
+    guessedEmails: z.array(z.string()).optional(),
   }).optional(),
   score: z.number().min(0).max(100),
 });

@@ -24,6 +24,7 @@ const envSchema = z.object({
   AI_BASE_URL: z.string().optional(),
   AI_FAST_MODEL: z.string().optional(),
   AI_SMART_MODEL: z.string().optional(),
+  AI_FLASH_MODEL: z.string().optional(),
 
   // Email
   EMAIL_FROM: z.string().email().optional(),

@@ -78,6 +78,18 @@ export const ResearcherStateAnnotation = Annotation.Root({
     default: () => 0,
   }),
 
+  // Contact hints extracted by contactNode via regex (runs on full un-truncated content)
+  // Passed to analyzeNode so the merged LLM prompt can pick the best contact
+  contactHints: Annotation<{
+    emails: string[];
+    phones: string[];
+    socialLinks: { platform: string; url: string }[];
+    hunterVerified: boolean;
+  }>({
+    reducer: (_, b) => b,
+    default: () => ({ emails: [], phones: [], socialLinks: [], hunterVerified: false }),
+  }),
+
   // ── OUTPUT (populated by the analyze node) ──
 
   research: Annotation<{

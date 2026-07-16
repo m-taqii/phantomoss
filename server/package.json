@@ -29,6 +29,7 @@
     "cors": "^2.8.6",
     "date-fns": "^4.4.0",
     "date-fns-tz": "^3.2.0",
+    "deep-email-validator": "^0.1.27",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "imapflow": "^1.4.2",

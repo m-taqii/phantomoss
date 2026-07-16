@@ -4,6 +4,16 @@ export const researchAnalysisPrompt = (state: ResearcherState) => {
   const hasStrategy = state.strategyResearch !== null;
   const hasContact = state.contact.name || state.contact.title || state.contact.email || state.contact.phone || state.contact.linkedin;
 
+  // Build contact hints section from regex + Hunter.io pre-extraction
+  const hints = state.contactHints;
+  const hintLines: string[] = [];
+  if (hints?.emails?.length > 0) hintLines.push(`Emails found on website: ${hints.emails.join(", ")}`);
+  if (hints?.phones?.length > 0) hintLines.push(`Phones found on website: ${hints.phones.join(", ")}`);
+  if (hints?.socialLinks?.length > 0) {
+    for (const s of hints.socialLinks) hintLines.push(`${s.platform}: ${s.url}`);
+  }
+  if (hints?.hunterVerified) hintLines.push(`NOTE: The email "${state.contact.email}" has been VERIFIED by Hunter.io — trust it.`);
+
   return `
 <role>
 You are an elite B2B sales research analyst. Your job is to analyze a company's website and produce actionable intelligence for a sales copywriter writing a hyper-personalized cold email.
@@ -14,6 +24,7 @@ You excel at:
 - Spotting signals of growth, change, or struggle
 - Mapping a company's gaps to your agency's exact capabilities
 - Writing a crisp business brief that explains EXACTLY how the agency can help
+- Identifying the decision-maker from website content and pre-extracted contact hints
 </role>
 
 <agency_context>
@@ -30,15 +41,19 @@ You excel at:
   ${state.company.size ? `<company_size>${state.company.size}</company_size>` : ""}
   ${state.company.description ? `<description>${state.company.description}</description>` : ""}
   ${hasContact ? `
-  <key_contact>
+  <current_contact>
     ${state.contact.name ? `<name>${state.contact.name}</name>` : ""}
     ${state.contact.title ? `<title>${state.contact.title}</title>` : ""}
     ${state.contact.email ? `<email>${state.contact.email}</email>` : ""}
     ${state.contact.emailSource ? `<email_source>${state.contact.emailSource}</email_source>` : ""}
     ${state.contact.phone ? `<phone>${state.contact.phone}</phone>` : ""}
     ${state.contact.linkedin ? `<linkedin>${state.contact.linkedin}</linkedin>` : ""}
-  </key_contact>` : ""}
+  </current_contact>` : ""}
 </lead_profile>
+
+${hintLines.length > 0 ? `<pre_extracted_contact_hints>
+${hintLines.join("\n")}
+</pre_extracted_contact_hints>` : ""}
 
 ${hasStrategy ? `
 <strategy_directives>
@@ -74,10 +89,11 @@ Analyze the website content and produce the following:
    - Exactly how OUR agency can help THEM based on our services and their specific gaps
    This is used internally to personalize outreach. Be specific — mention their industry and a concrete capability we can add.)
 
-7. **Contact Verification** (given the key contact above):
-   - Is their email correct? Mark emailSource: "verified", "corrected", or "guessed"
-   - Find ANY additional contact channels: personal LinkedIn, phone, Instagram, WhatsApp
-   - Find the decision maker (Owner/Founder/CEO) if not already identified
+7. **Contact Identification** — Using the pre-extracted hints AND the website content:
+   - Pick the BEST decision-maker contact (Owner/Founder/CEO/Director)
+   - From the hints, choose the most relevant personal email (avoid generic info@/hello@/support@ if a personal one exists)
+   - Find their name, title, personal LinkedIn, phone, Instagram if visible
+   - If no personal email exists in hints or current_contact, generate 4-5 guessed emails based on the decision-maker's name and the company domain in \`guessedEmails\` (e.g. ['first@domain', 'first.last@domain', 'f.last@domain', 'info@domain', 'hello@domain', 'sales@domain', 'support@domain']). Put the decision-maker guesses first, and generic ones last.
 
 8. **Score** (0-100 outreach fit):
    - 80-100: Clear pain points we solve + active business + reachable contact
@@ -102,7 +118,8 @@ Return ONLY a valid JSON object. No explanation. No markdown. No backticks.
   "updatedContact": {
     "name": "Found Name or null",
     "title": "Found Title or null",
-    "email": "Verified/Corrected Email or null if keeping existing",
+    "email": "Best email from hints or null if keeping existing",
+    "guessedEmails": ['first@domain', 'first.last@domain', 'f.last@domain', 'info@domain', 'hello@domain', 'sales@domain', 'support@domain'],
     "phone": "Found Phone or null",
     "linkedin": "Personal LinkedIn URL or null",
     "instagram": "Personal Instagram handle or null",
@@ -113,55 +130,3 @@ Return ONLY a valid JSON object. No explanation. No markdown. No backticks.
 </output_format>
 `;
 };
-
-export function buildContactPrompt(
-  content: string, 
-  hints: { emails: string[], phones: string[], socialLinks: { platform: string, url: string }[] }, 
-  domain: string
-): string {
-  const hintLines: string[] = [];
-  if (hints.emails.length > 0) hintLines.push(`Emails found: ${hints.emails.join(", ")}`);
-  if (hints.phones.length > 0) hintLines.push(`Phones found: ${hints.phones.join(", ")}`);
-  if (hints.socialLinks.length > 0) {
-    for (const s of hints.socialLinks) hintLines.push(`${s.platform}: ${s.url}`);
-  }
-
-  return `
-<role>
-You are a B2B contact intelligence specialist. Your job is to identify the decision-maker (Owner, Founder, CEO, Managing Director) of a business and extract their contact information.
-</role>
-
-<task>
-Analyze the website content for "${domain}" and return structured contact data.
-</task>
-
-${hintLines.length > 0 ? `<pre_extracted_hints>
-${hintLines.join("\n")}
-</pre_extracted_hints>` : ""}
-
-<website_content>
-${content}
-</website_content>
-
-<rules>
-- Priority 1: Find the decision-maker's PERSONAL contact (name, email, phone, LinkedIn)
-- Priority 2: Fall back to business email (info@, hello@, contact@) from the pre-extracted hints
-- Priority 3: GUESS using pattern info@${domain} — set emailGuessed: true
-- NEVER return null for email — always use the fallback chain above
-- Extract ALL available contact channels (phone, linkedin, instagram, whatsapp)
-</rules>
-
-<output_format>
-Return ONLY a valid JSON object matching this structure. No explanation. No markdown.
-{
-  "name": "string | null (e.g. John Doe)",
-  "title": "string | null (e.g. CEO)",
-  "email": "string (the extracted or guessed email)",
-  "emailGuessed": "boolean (true ONLY if you guessed using info@domain)",
-  "phone": "string | null",
-  "linkedin": "string | null",
-  "instagram": "string | null",
-  "whatsapp": "string | null"
-}
-</output_format>`;
-}

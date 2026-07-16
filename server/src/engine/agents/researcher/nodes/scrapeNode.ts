@@ -1,5 +1,5 @@
 import type { ResearcherState } from "../state";
-import urlReader from "../../../../services/extractor.service";
+import urlReader, { stripMarkdownLinks } from "../../../../services/extractor.service";
 
 /*
   SCRAPE NODE
@@ -108,7 +108,8 @@ export async function scrapeNode(
       }
     }
 
-    const fullContent = sections.join("\n\n");
+    // Strip markdown links from the final content (subpage discovery already happened above)
+    const fullContent = stripMarkdownLinks(sections.join("\n\n"));
     console.log(
       `[ScrapeNode] Scraped ${pagesScraped} page(s), ${fullContent.length} chars for ${state.company.name}`
     );
