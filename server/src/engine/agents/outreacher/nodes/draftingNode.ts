@@ -5,7 +5,7 @@ import { EmailSchema } from "../../../../schemas/email.schema";
 
 export default async function draftingNode(state: typeof OutreacherStateAnnotation.State) {
 
-    const llm = getLLM("smart");
+    const llm = getLLM("fast");
 
     const { company, contact, research, agency } = state;
 
