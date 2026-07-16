@@ -50,6 +50,8 @@ services:
     env_file:
       - ./client/.env
     restart: unless-stopped
+    environment:
+      - INTERNAL_API_URL=http://server:8080
 
 volumes:
   redis_data:
