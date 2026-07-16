@@ -131,6 +131,28 @@ export default function LeadsPage() {
   };
 
   // Action: Reject / Delete Lead
+  const handleUpdateLead = async (leadId: string, updates: any) => {
+    try {
+      await axios.put(`${process.env.NEXT_PUBLIC_BASE_URL}/api/leads/${leadId}`, updates, { withCredentials: true });
+      toast({
+        title: "Lead Updated",
+        description: "Lead details have been saved.",
+        type: "success"
+      });
+      await fetchLeads();
+      if (selectedLead?.id === leadId) {
+        setSelectedLead(prev => prev ? { ...prev, ...updates } : null);
+      }
+    } catch (error) {
+      console.error("Failed to update lead:", error);
+      toast({
+        title: "Update Failed",
+        description: "Failed to update lead details.",
+        type: "error"
+      });
+    }
+  };
+
   const handleRejectLead = async (leadId: string) => {
     try {
       await axios.delete(`${process.env.NEXT_PUBLIC_BASE_URL}/api/leads/${leadId}`, {
@@ -538,6 +560,7 @@ export default function LeadsPage() {
         lead={selectedLead}
         onApprove={handleApproveLead}
         onReject={handleRejectLead}
+        onUpdate={handleUpdateLead}
       />
     </div>
   );

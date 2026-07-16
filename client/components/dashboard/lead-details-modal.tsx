@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Globe, MapPin, Mail, Phone, Calendar, Users2,
   ExternalLink, Trash2, Check, CheckCircle2, AlertTriangle,
-  Building2, Sparkles, Award
+  Building2, Sparkles, Award, Edit2, Save
 } from 'lucide-react';
 import { statusStyles, LeadStatus } from '@/lib/data/leads';
 
@@ -44,6 +44,7 @@ interface LeadDetailsModalProps {
   lead: any;
   onApprove: (leadId: string) => Promise<void>;
   onReject: (leadId: string) => Promise<void>;
+  onUpdate?: (leadId: string, updates: any) => Promise<void>;
 }
 
 export const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({
@@ -51,8 +52,37 @@ export const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({
   onClose,
   lead,
   onApprove,
-  onReject
+  onReject,
+  onUpdate
 }) => {
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [editedContact, setEditedContact] = React.useState<any>({});
+  const [isSaving, setIsSaving] = React.useState(false);
+
+  React.useEffect(() => {
+    if (isOpen && lead?.contact) {
+      setEditedContact({
+        name: lead.contact.name || '',
+        title: lead.contact.title || '',
+        email: lead.contact.email || '',
+      });
+      setIsEditing(false);
+    }
+  }, [isOpen, lead]);
+
+  const handleSave = async () => {
+    if (!onUpdate) return;
+    setIsSaving(true);
+    try {
+      await onUpdate(lead.id, { contact: { ...lead.contact, ...editedContact } });
+      setIsEditing(false);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   if (!lead) return null;
 
   const s = statusStyles[lead.status as LeadStatus] || { label: lead.status, bg: 'bg-gray-500/10', text: 'text-gray-400', icon: AlertTriangle };
@@ -203,11 +233,56 @@ export const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({
 
                 {/* Contact Information */}
                 <div className="space-y-4">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground border-b border-border pb-2">
-                    Key Contact
-                  </h4>
+                  <div className="flex items-center justify-between border-b border-border pb-2">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      Key Contact
+                    </h4>
+                    {onUpdate && !isEditing && (
+                      <button onClick={() => setIsEditing(true)} className="text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
+                        <Edit2 className="w-3 h-3" /> Edit
+                      </button>
+                    )}
+                    {isEditing && (
+                      <button onClick={handleSave} disabled={isSaving} className="text-xs flex items-center gap-1 text-emerald-500 hover:text-emerald-400 font-bold transition-colors">
+                        <Save className="w-3 h-3" /> {isSaving ? "Saving..." : "Save"}
+                      </button>
+                    )}
+                  </div>
                   <div className="space-y-3 text-sm">
-                    {lead.contact?.name || lead.contact?.email ? (
+                    {isEditing ? (
+                      <div className="space-y-3">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-muted-foreground">Full Name</label>
+                          <input
+                            type="text"
+                            value={editedContact.name}
+                            onChange={e => setEditedContact({ ...editedContact, name: e.target.value })}
+                            className="w-full bg-background border border-border rounded-md px-3 py-1.5 text-sm outline-none focus:border-accent/50 transition-colors"
+                            placeholder="John Doe"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-muted-foreground">Job Title</label>
+                          <input
+                            type="text"
+                            value={editedContact.title}
+                            onChange={e => setEditedContact({ ...editedContact, title: e.target.value })}
+                            className="w-full bg-background border border-border rounded-md px-3 py-1.5 text-sm outline-none focus:border-accent/50 transition-colors"
+                            placeholder="CEO"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-muted-foreground">Email Address</label>
+                          <input
+                            type="email"
+                            value={editedContact.email}
+                            onChange={e => setEditedContact({ ...editedContact, email: e.target.value })}
+                            className="w-full bg-background border border-border rounded-md px-3 py-1.5 text-sm outline-none focus:border-accent/50 transition-colors font-mono"
+                            placeholder="john@example.com"
+                          />
+                        </div>
+                      </div>
+                    ) : (lead.contact?.name || lead.contact?.email ? (
                       <>
                         {lead.contact?.name && (
                           <div className="font-semibold text-foreground">{lead.contact.name}</div>
@@ -255,7 +330,7 @@ export const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({
                       <div className="text-muted-foreground italic text-xs py-2">
                         No contact found yet. The Swarm is searching for decision makers...
                       </div>
-                    )}
+                    ))}
                   </div>
                 </div>
               </div>

@@ -43,16 +43,16 @@ export async function updateLead(req: AuthenticatedRequest, res: Response) {
         );
         if (!lead) return sendNotFound(res, "Lead");
 
-        // If the lead was just approved for outreach manually, trigger the Outreacher
+        // If the lead was just approved for outreach manually, trigger the Outreacher instantly
         if (req.body.status === "approved" && req.body.humanApproved === true) {
-            const { getQueue } = await import("../engine/queue");
-            const outreachQueue = getQueue("outreach");
-            await outreachQueue.add("draft_email", {
+            const { processOutreachJob } = await import("../engine/workers/outreacher.worker");
+            // Call in background (detached promise)
+            processOutreachJob({
                 campaignId: lead.campaignId.toString(),
                 leadId: lead._id.toString(),
                 autoSend: false,
-            });
-            console.log(`[Leads Controller] Queued forced-draft outreach for manually approved lead ${lead._id}`);
+            }).catch(e => console.error(`[Leads Controller] Instant outreach failed:`, e));
+            console.log(`[Leads Controller] Triggered instant forced-draft outreach for manually approved lead ${lead._id}`);
         }
 
         return sendSuccess(res, lead, "Lead updated successfully");
