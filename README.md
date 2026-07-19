@@ -1,4 +1,4 @@
-<div align="center">
+﻿<div align="center">
   <h1>
     <img src="client/public/phantom-logo.png" width="80" align="middle" alt="Phantom Mascot" />
     PHANTOM OSS
@@ -68,7 +68,7 @@ The Reply Handler polls your inbox via IMAP, classifies every inbound response (
 
 **Role:** Continuous Feedback and Strategy Optimization.
 
-The Learner analyzes the outcomes of your outreach—which messages booked calls, which angles failed, and what specific objections leads raised in their replies. It persists these insights into the memory vault and triggers the Strategist to dynamically refine and update the live campaign strategy based on real-world data.
+The Learner analyzes the outcomes of your outreach - which messages booked calls, which angles failed, and what specific objections leads raised in their replies. It persists these insights into the memory vault and triggers the Strategist to dynamically refine and update the live campaign strategy based on real-world data.
 
 **Output:** Actionable campaign learnings and strategy update triggers.
 
@@ -92,14 +92,15 @@ graph TD
 
 ### Tiered AI Router
 
-Phantom uses a provider-agnostic AI routing layer built on the OpenAI-compatible API standard. Every LLM call in the system goes through a two-tier router, fast models for grunt work, smart models for the tasks that actually matter.
+Phantom uses a provider-agnostic AI routing layer built on the OpenAI-compatible API standard. Every LLM call in the system goes through a three-tier router - flash models for the fastest tasks, fast models for grunt work, and smart models for the tasks that actually matter.
 
 | Tier | Used For | Default Model | Override |
 | :--- | :--- | :--- | :--- |
+| **Flash** | Ultra-fast classification, simple extraction | `qwen3.5-flash` | `AI_FLASH_MODEL` |
 | **Fast** | Classification, data extraction, JSON parsing, formatting | `qwen3.7-plus` | `AI_FAST_MODEL` |
 | **Smart** | Strategy formulation, personalized copywriting, objection handling, multi-turn reasoning | `qwen3.7-max` | `AI_SMART_MODEL` |
 
-The defaults use Alibaba's open-weight Qwen 3.7 models, but you can point Phantom at any OpenAI-compatible endpoint vLLM, Ollama, Groq, OpenAI, or anything else that speaks the same API.
+The defaults use Alibaba's open-weight Qwen 3.7 models via DashScope, but you can point Phantom at any OpenAI-compatible endpoint - vLLM, Ollama, Groq, OpenAI, or anything else that speaks the same API. You can also set `AI_API_KEY` or `QWEN_API_KEY` as convenience shortcuts for specific providers.
 
 ### BullMQ Job Engine
 
@@ -109,6 +110,7 @@ The agent pipeline runs on BullMQ backed by Redis. No polling loops. No cron hac
 - **Zero-polling scheduler** : uses Redis delayed jobs to fire campaigns at exact times without querying MongoDB on an interval
 - **Self-terminating workers** : workers shut down automatically when their queue drains, conserving resources until more work arrives
 - **Exponential backoff** : failed jobs retry up to 3 times with increasing delay
+- **Dedicated scheduler worker** : a separate `scheduler.worker.ts` manages campaign timing and lifecycle outside the agent pipeline
 
 ---
 
@@ -116,129 +118,275 @@ The agent pipeline runs on BullMQ backed by Redis. No polling loops. No cron hac
 
 | Layer | Technology |
 | :--- | :--- |
-| Runtime | Node.js |
+| Runtime | Node.js v20+ |
 | Backend | Express 5 · TypeScript |
 | Frontend | Next.js 16 · React 19 · Tailwind CSS v4 |
 | Agent Framework | LangGraph · LangChain (OpenAI-compatible) |
 | Database | MongoDB · Mongoose |
-| Job Queue | BullMQ · Redis |
-| Authentication | JWT · bcryptjs |
-| Email | Nodemailer (SMTP) · IMAP polling |
-| Scheduling | node-cron · Calendly integration |
+| Job Queue | BullMQ · Redis (ioredis) |
+| Authentication | JWT · bcryptjs · Cookie-based sessions |
+| Email (outbound) | Nodemailer (SMTP) |
+| Email (inbound) | imapflow · mailparser |
+| State Management | Zustand |
 | Validation | Zod |
-| UI | Framer Motion · Lucide React |
+| UI | Framer Motion · Lucide React · Lenis |
+| HTTP Client | Axios |
 
 ---
 
 ## Getting Started
 
-### Prerequisites
+### Before You Begin — Gather Your Keys
 
-- [Node.js](https://nodejs.org/) v20 or later
-- [pnpm](https://pnpm.io/) (`npm i -g pnpm`)
-- [Docker](https://www.docker.com/) and Docker Compose
+Phantom requires a few external accounts. Get these set up first and keep the keys handy.
 
-### 1. Configure Environment
+| Service | What It's Used For | Free Tier? | Sign Up |
+| :--- | :--- | :---: | :--- |
+| **AI Provider** (e.g. Qwen Cloud) | Runs all six agents | ✅ | [Qwen Cloud](https://www.qwencloud.com/) · [OpenAI](https://platform.openai.com) · [Groq](https://console.groq.com) |
+| **Serper** | Google Search API for lead discovery | ✅ 2 500 free queries | [serper.dev](https://serper.dev) |
+| **Hunter.io** | Email discovery and verification | ✅ 50 free/month | [hunter.io](https://hunter.io) |
+| **Email account** | SMTP sending + IMAP reply polling | ✅ Gmail works | [Gmail App Password guide](#gmail-app-password) |
 
-Create a `.env` file in the `server/` directory:
 
+### System Prerequisites
+
+- [Node.js](https://nodejs.org/) v20 or later — `node --version` to check
+- [pnpm](https://pnpm.io/) — `npm i -g pnpm`
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (for the recommended Docker path)
+
+### Step 1 — Clone and Install
+
+```bash
+git clone https://github.com/m-taqii/phantomoss.git
+cd phantomoss
+```
+
+### Step 2 — Configure the Server
+
+Copy the example env file and fill it in:
+
+```bash
+cp server/.env.example server/.env
+```
+
+Then open `server/.env` and set the following:
+
+**Infrastructure** (pre-filled if using Docker — no changes needed):
 ```env
 PORT=8080
 MONGODB_URI=mongodb://localhost:27017/phantomdb
 REDIS_URL=redis://localhost:6379
-JWT_SECRET=<your-jwt-secret>
 CLIENT_URL=http://localhost:3000
+```
 
-# AI Provider (OpenAI-compatible)
-AI_API_KEY=<your-api-key>
-# AI_BASE_URL=https://dashscope-intl.aliyuncs.com/compatible-mode/v1
-# AI_FAST_MODEL=qwen3.7-plus
-# AI_SMART_MODEL=qwen3.7-max
+**Auth** (generate any long random string):
+```env
+JWT_SECRET=change-me-to-any-long-random-string
+JWT_EXPIRES_IN=7d
+```
 
-# Data APIs
-SERPER_API_KEY=<your-serper-api-key>
-HUNTER_API_KEY=<your-hunterio-api-key>
+**AI Provider** — pick one that suits you:
+```env
+# Option A: DashScope (Alibaba Qwen — recommended default)
+AI_API_KEY=your-dashscope-api-key
+AI_BASE_URL=https://dashscope-intl.aliyuncs.com/compatible-mode/v1
+AI_FAST_MODEL=qwen-plus
+AI_SMART_MODEL=qwen-max
 
-# Email Configuration (SMTP for sending, IMAP for reply polling)
+# Option B: Groq (free, fast)
+AI_API_KEY=your-groq-api-key
+AI_BASE_URL=https://api.groq.com/openai/v1
+AI_FAST_MODEL=llama-3.1-8b-instant
+AI_SMART_MODEL=llama-3.3-70b-versatile
+
+# Option C: OpenAI
+AI_API_KEY=your-openai-api-key
+# AI_BASE_URL is not needed for OpenAI — it's the default
+AI_FAST_MODEL=gpt-4o-mini
+AI_SMART_MODEL=gpt-4o
+```
+
+**Lead Discovery APIs:**
+```env
+SERPER_API_KEY=your-serper-api-key      # serper.dev
+HUNTER_API_KEY=your-hunter-api-key     # hunter.io
+```
+
+**Email (SMTP + IMAP):**
+```env
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_USER=you@youragency.com
-SMTP_PASS=app_password
+SMTP_USER=you@yourdomain.com
+SMTP_PASS=your-app-password        # See Gmail App Password section below
+SMTP_SECURE=false
+SMTP_FROM_NAME=Your Name
+SMTP_FROM_ADDRESS=you@yourdomain.com
+
 IMAP_HOST=imap.gmail.com
 IMAP_PORT=993
-IMAP_USER=you@youragency.com # Falls back to SMTP_USER if omitted
-IMAP_PASS=app_password       # Falls back to SMTP_PASS if omitted
+IMAP_USER=you@yourdomain.com       # Falls back to SMTP_USER if omitted
+IMAP_PASS=your-app-password        # Falls back to SMTP_PASS if omitted
 ```
 
-Create a `.env` file in the `client/` directory:
+### Step 3 — Configure the Client
 
-```env
-NEXT_PUBLIC_BASE_URL=http://localhost:8080
+Create `client/.env`:
+
+```bash
+echo "NEXT_PUBLIC_BASE_URL=http://localhost:8080" > client/.env
 ```
 
-### 2. Ignite the Swarm
+### Step 4 — Launch
 
-The easiest way to run Phantom is using Docker Compose, which automatically spins up MongoDB, Redis, the Node Backend, and the Next.js Frontend all at once:
+**Docker (recommended — spins up everything automatically):**
 
 ```bash
 docker-compose up -d
 ```
 
-The Phantom dashboard will be live at `http://localhost:3000`.
+This starts four containers: MongoDB, Redis, the Express API (`localhost:8080`), and the Next.js dashboard (`localhost:3000`).
 
-*(Alternatively, you can run the services manually using `pnpm install` and `pnpm run dev` in both the `server/` and `client/` directories.)*
+**Manual (without Docker):**
+
+```bash
+# Terminal 1 — start MongoDB and Redis yourself (via Docker or a local install)
+docker run -d -p 27017:27017 mongo:7
+docker run -d -p 6379:6379 redis:7-alpine
+
+# Terminal 2 — backend
+cd server && pnpm install && pnpm run dev
+
+# Terminal 3 — frontend
+cd client && pnpm install && pnpm run dev
+```
+
+### Step 5 — First Use
+
+1. Open `http://localhost:3000` in your browser
+2. Click **Register** to create your account
+3. Go to **Settings** and fill in your agency profile (name, services, case studies, target market)
+4. Go to **Campaigns** → **New Campaign** and describe who you want to target
+5. Activate the campaign — Phantom will start hunting leads immediately
+
+---
+
+## Gmail App Password
+
+If you use Gmail for SMTP/IMAP, you must generate an **App Password** (your regular Gmail password won't work with SMTP):
+
+1. Go to [myaccount.google.com/security](https://myaccount.google.com/security)
+2. Enable **2-Step Verification** if not already on
+3. Search for **"App passwords"** on the same page
+4. Create a new app password — select **Mail** and your device
+5. Copy the 16-character password and paste it as `SMTP_PASS` (and `IMAP_PASS`)
+
+> **Using a custom domain?** If your email is on Google Workspace (`you@yourcompany.com`) the process is identical — just use that address for `SMTP_USER`.
+
+---
+
+## Troubleshooting
+
+**Agents aren't running / campaign is stuck**
+- Check that Redis is reachable: `redis-cli ping` should return `PONG`
+- Check server logs: `docker logs phantom_server` or your terminal output
+- Verify `AI_API_KEY` and `AI_BASE_URL` are correct — a bad key produces no error until an agent fires
+
+**No leads being discovered**
+- Confirm `SERPER_API_KEY` is valid — test it at [serper.dev/playground](https://serper.dev/playground)
+- Make sure your campaign has a clear target market description in the strategy
+
+**Emails aren't sending**
+- Gmail: ensure you're using an **App Password**, not your login password
+- Check `SMTP_HOST`, `SMTP_PORT`, and `SMTP_SECURE` match your provider's settings
+- Port `587` + `SMTP_SECURE=false` (STARTTLS) is the most common working combination
+
+**Reply Handler not picking up emails**
+- IMAP must be enabled in your Gmail settings: **Settings → See all settings → Forwarding and POP/IMAP → Enable IMAP**
+- Make sure `IMAP_HOST` / `IMAP_PORT` are correct (`imap.gmail.com` / `993`)
+
+**Docker containers fail to start**
+- Ensure ports 3000, 8080, 27017, and 6379 are not in use by another process
+- Run `docker-compose down -v` then `docker-compose up -d` for a clean start
 
 ---
 
 ## Configuration Reference
 
+### Server (`server/.env`)
+
 | Variable | Required | Description |
 | :--- | :---: | :--- |
-| `PORT` | Yes | Backend server port |
+| `PORT` | Yes | Backend server port (default: `8080`) |
 | `MONGODB_URI` | Yes | MongoDB connection string |
 | `REDIS_URL` | Yes | Redis connection string |
+| `REDIS_HOST` | No | Redis host override (alternative to `REDIS_URL`) |
+| `REDIS_PORT` | No | Redis port override |
+| `REDIS_PASSWORD` | No | Redis authentication password |
 | `JWT_SECRET` | Yes | Secret key for JWT token signing |
-| `CLIENT_URL` | Yes | URL of the frontend client (defaults to http://localhost:3000) |
-| `SMTP_HOST` | Yes | SMTP server hostname for outbound emails |
-| `SMTP_PORT` | No | SMTP server port (defaults to 587) |
-| `SMTP_USER` | Yes | SMTP authentication username |
-| `SMTP_PASS` | Yes | SMTP authentication password / app password |
-| `IMAP_HOST` | Yes | IMAP server hostname for inbound reply polling |
-| `IMAP_PORT` | No | IMAP server port (defaults to 993) |
-| `IMAP_USER` | No | IMAP username (defaults to SMTP_USER if omitted) |
-| `IMAP_PASS` | No | IMAP password (defaults to SMTP_PASS if omitted) |
+| `JWT_EXPIRES_IN` | No | JWT token lifetime (default: `7d`) |
+| `CLIENT_URL` | Yes | URL of the frontend client (default: `http://localhost:3000`) |
 | `AI_API_KEY` | Yes | API key for the AI provider |
-| `AI_BASE_URL` | No | Custom OpenAI-compatible endpoint (defaults to Alibaba DashScope) |
-| `AI_FAST_MODEL` | No | Model name for the fast tier (defaults to `qwen3.7-plus`) |
-| `AI_SMART_MODEL` | No | Model name for the smart tier (defaults to `qwen3.7-max`) |
+| `AI_BASE_URL` | No | Custom OpenAI-compatible endpoint (default: Alibaba DashScope) |
+| `AI_FAST_MODEL` | No | Model for the fast tier (default: `qwen3.7-plus`) |
+| `AI_SMART_MODEL` | No | Model for the smart tier (default: `qwen3.7-max`) |
+| `AI_FLASH_MODEL` | No | Model for the flash tier (optional) |
+| `QWEN_API_KEY` | No | Convenience shortcut for Qwen/DashScope provider |
 | `SERPER_API_KEY` | Yes | API key for Serper.dev Google Search integration |
 | `HUNTER_API_KEY` | Yes | API key for Hunter.io email discovery and verification |
+| `SMTP_HOST` | Yes | SMTP server hostname for outbound emails |
+| `SMTP_PORT` | No | SMTP server port (default: `587`) |
+| `SMTP_USER` | Yes | SMTP authentication username |
+| `SMTP_PASS` | Yes | SMTP authentication password / app password |
+| `SMTP_SECURE` | No | Use TLS (`"true"` for port 465, `"false"` for STARTTLS) |
+| `SMTP_FROM_NAME` | No | Display name for outbound emails |
+| `SMTP_FROM_ADDRESS` | No | From address for outbound emails (defaults to `SMTP_USER`) |
+| `EMAIL_FROM` | No | Alternative single from address (e.g. `Name <email@domain.com>`) |
+| `IMAP_HOST` | Yes | IMAP server hostname for inbound reply polling |
+| `IMAP_PORT` | No | IMAP server port (default: `993`) |
+| `IMAP_USER` | No | IMAP username (defaults to `SMTP_USER`) |
+| `IMAP_PASS` | No | IMAP password (defaults to `SMTP_PASS`) |
+
+### Client (`client/.env`)
+
+| Variable | Required | Description |
+| :--- | :---: | :--- |
+| `NEXT_PUBLIC_BASE_URL` | Yes | Public URL of the backend API (default: `http://localhost:8080`) |
+| `INTERNAL_API_URL` | No | Internal Docker network URL for server-side API calls (auto-set by Docker Compose) |
 
 ---
 
 ## Project Structure
 
 ```
-phantom/
+phantomoss/
 ├── client/                  # Next.js 16 frontend dashboard
 │   ├── app/                 # App router pages and layouts
+│   │   ├── dashboard/       # Main dashboard (campaigns, leads, outreach, memory, settings)
+│   │   ├── login/           # Authentication pages
+│   │   └── register/
 │   ├── components/          # React components
+│   │   ├── dashboard/       # Campaign cards, modals, strategy viewer
+│   │   └── ui/              # Shared UI primitives
 │   ├── hooks/               # Custom React hooks
-│   └── lib/                 # Client-side utilities
+│   ├── lib/                 # Client-side utilities
+│   ├── store/               # Zustand global state stores
+│   └── proxy.ts             # Next.js middleware for auth-protected routes
 ├── server/                  # Express backend and agent engine
+│   ├── index.ts             # Server entry point
 │   └── src/
+│       ├── app.ts           # Express app setup and middleware registration
 │       ├── controllers/     # Route handlers
-│       ├── middleware/      # custom middleware
+│       ├── middlewares/     # Custom middleware (auth, error handling)
 │       ├── engine/
-│       │   ├── agents/      # Agent implementations (strategist, hunter, researcher, outreacher, inbox_handler, learner)
-│       │   ├── workers/     # BullMQ worker definitions
+│       │   ├── agents/      # Agent implementations (strategist, Hunter, researcher, outreacher, inbox_handler, learner)
+│       │   ├── workers/     # BullMQ worker definitions (per-agent + scheduler)
 │       │   └── queue.ts     # Queue factory and configuration
-│       ├── lib/             # Core utilities (AI router, Redis, env)
-│       ├── models/          # Mongoose schemas
+│       ├── lib/             # Core utilities (AI router, Redis, DB, email, JWT, logger)
+│       ├── models/          # Mongoose schemas (agency, campaign, lead, outreach, learning)
 │       ├── routes/          # Express route definitions
 │       ├── schemas/         # Zod validation schemas
 │       └── services/        # Business logic layer
-└── docker-compose.yaml      # MongoDB and Redis infrastructure
+└── docker-compose.yaml      # Full stack: MongoDB, Redis, server, and client
 ```
 
 ---
