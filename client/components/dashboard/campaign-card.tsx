@@ -147,18 +147,14 @@ export const CampaignCard = ({ campaign, onUpdate }: { campaign: Campaign, onUpd
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-3 gap-4 mb-4 p-3 bg-background/50 rounded-lg border border-border/50">
-        <div className="text-center">
+      <div className="grid grid-cols-2 gap-4 mb-4 p-3 bg-background/50 rounded-lg border border-border/50">
+        <div className="text-center border-r border-border/50">
           <span className="block text-lg font-bold text-foreground">{campaign.stats.leadsFound}</span>
           <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Leads</span>
         </div>
-        <div className="text-center border-x border-border/50">
+        <div className="text-center">
           <span className="block text-lg font-bold text-foreground">{campaign.stats.emailsSent}</span>
           <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Sent</span>
-        </div>
-        <div className="text-center">
-          <span className="block text-lg font-bold text-accent">{campaign.stats.callsBooked}</span>
-          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Booked</span>
         </div>
       </div>
 
@@ -179,7 +175,6 @@ export const CampaignCard = ({ campaign, onUpdate }: { campaign: Campaign, onUpd
       {/* Bottom Details */}
       <div className="grid grid-cols-2 gap-2">
         <StatItem icon={Mail} label="Replies" value={campaign.stats.replies} />
-        <StatItem icon={BarChart2} label="Opened" value={campaign.stats.emailsOpened} />
         <StatItem icon={Clock} label="Limit" value={`${campaign.schedule.dailyLimit}/day`} />
         <StatItem icon={Calendar} label="Created" value={campaign.createdAt} />
       </div>

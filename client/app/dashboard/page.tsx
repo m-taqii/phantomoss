@@ -59,10 +59,6 @@ const Page = () => {
   const totalLeads = campaigns.reduce((acc, c) => acc + (c.stats?.leadsFound || 0), 0);
   const totalEmails = campaigns.reduce((acc, c) => acc + (c.stats?.emailsSent || 0), 0);
   const totalReplies = campaigns.reduce((acc, c) => acc + (c.stats?.replies || 0), 0);
-  const totalCalls = campaigns.reduce((acc, c) => acc + (c.stats?.callsBooked || 0), 0);
-  
-  const replyRate = totalEmails > 0 ? ((totalReplies / totalEmails) * 100).toFixed(1) + '%' : '0%';
-
   const renderAgentStatus = (name: string, data: any, defaultText: string) => {
     const isWorking = data?.active > 0 || data?.waiting > 0;
     const isWaiting = data?.waiting > 0;
@@ -90,7 +86,7 @@ const Page = () => {
   return (
     <div className="flex flex-col gap-5 text-foreground">
       {/* Top Stats Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5">
+      <div className="grid grid-cols-2 gap-3 md:gap-5">
         <div className="bg-card border border-border rounded-xl p-4 md:p-5 flex flex-col">
           <span className="text-[10px] md:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 md:mb-3">Leads Found</span>
           <span className="text-2xl md:text-3xl font-bold mb-1">{totalLeads}</span>
@@ -100,16 +96,6 @@ const Page = () => {
           <span className="text-[10px] md:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 md:mb-3">Emails Sent</span>
           <span className="text-2xl md:text-3xl font-bold mb-1">{totalEmails}</span>
           <span className="text-xs font-medium text-muted-foreground">Total volume</span>
-        </div>
-        <div className="bg-card border border-border rounded-xl p-4 md:p-5 flex flex-col">
-          <span className="text-[10px] md:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 md:mb-3">Reply Rate</span>
-          <span className="text-2xl md:text-3xl font-bold mb-1">{replyRate}</span>
-          <span className="text-xs font-medium text-muted-foreground">Average conversion</span>
-        </div>
-        <div className="bg-card border border-border rounded-xl p-4 md:p-5 flex flex-col">
-          <span className="text-[10px] md:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 md:mb-3">Calls Booked</span>
-          <span className="text-2xl md:text-3xl font-bold mb-1">{totalCalls}</span>
-          <span className="text-xs font-medium text-muted-foreground">Total scheduled</span>
         </div>
       </div>
 

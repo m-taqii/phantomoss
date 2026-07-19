@@ -228,7 +228,6 @@ export default function LeadsPage() {
     if (activeTab === "approved") return matchesSearch && l.status === "approved";
     if (activeTab === "outreached") return matchesSearch && ["queued", "contacted", "followed_up"].includes(l.status);
     if (activeTab === "replied") return matchesSearch && l.status === "replied";
-    if (activeTab === "won") return matchesSearch && ["call_booked", "proposal_sent", "converted"].includes(l.status);
 
     return matchesSearch && l.status === activeTab;
   });
@@ -248,7 +247,6 @@ export default function LeadsPage() {
     if (tab === "approved") return leads.filter(l => l.status === "approved").length;
     if (tab === "outreached") return leads.filter(l => ["queued", "contacted", "followed_up"].includes(l.status)).length;
     if (tab === "replied") return leads.filter(l => l.status === "replied").length;
-    if (tab === "won") return leads.filter(l => ["call_booked", "proposal_sent", "converted"].includes(l.status)).length;
     return leads.filter(l => l.status === tab).length;
   };
 
@@ -278,8 +276,7 @@ export default function LeadsPage() {
             { id: 'needs_review', label: 'Needs Review' },
             { id: 'approved', label: 'Approved' },
             { id: 'outreached', label: 'Outreached' },
-            { id: 'replied', label: 'Replies' },
-            { id: 'won', label: 'Meetings Booked' }
+            { id: 'replied', label: 'Replies' }
           ].map(tab => (
             <button
               key={tab.id}
