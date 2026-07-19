@@ -187,23 +187,11 @@ JWT_EXPIRES_IN=7d
 
 **AI Provider** — pick one that suits you:
 ```env
-# Option A: DashScope (Alibaba Qwen — recommended default)
+#
 AI_API_KEY=your-dashscope-api-key
 AI_BASE_URL=https://dashscope-intl.aliyuncs.com/compatible-mode/v1
 AI_FAST_MODEL=qwen-plus
 AI_SMART_MODEL=qwen-max
-
-# Option B: Groq (free, fast)
-AI_API_KEY=your-groq-api-key
-AI_BASE_URL=https://api.groq.com/openai/v1
-AI_FAST_MODEL=llama-3.1-8b-instant
-AI_SMART_MODEL=llama-3.3-70b-versatile
-
-# Option C: OpenAI
-AI_API_KEY=your-openai-api-key
-# AI_BASE_URL is not needed for OpenAI — it's the default
-AI_FAST_MODEL=gpt-4o-mini
-AI_SMART_MODEL=gpt-4o
 ```
 
 **Lead Discovery APIs:**
